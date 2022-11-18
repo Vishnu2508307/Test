@@ -1,0 +1,10 @@
+**.terraform
+**.plan
+**terraform.tfstate
+!**.empty
+#build/**
+**/.DS_Store
+**.swp
+**.zip
+**.creds
+**.ssh

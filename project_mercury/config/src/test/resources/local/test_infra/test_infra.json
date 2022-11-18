@@ -1,0 +1,6 @@
+{
+  "test.infra" : {
+    "bucketName" : "awsBucketName",
+    "bucketUrl": "awsBucketUrl"
+  }
+}

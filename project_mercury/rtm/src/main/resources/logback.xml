@@ -1,0 +1,48 @@
+<configuration>
+  <contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator"/>
+
+  <if condition='property("logging").contains("legacy")'>
+
+    <then>
+      <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- encoders are assigned the type
+             ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+        <encoder>
+          <pattern>%d ${HOSTNAME} %-4relative [%thread] requestContext=[%X{REQUEST_CONTEXT}] %-5level %logger{35} %X{clientId} - %msg %n</pattern>
+        </encoder>
+      </appender>
+    </then>
+
+    <else>
+      <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
+          <layout class="com.smartsparrow.util.log.JsonLayout" />
+        </encoder>
+      </appender>
+    </else>
+
+  </if>
+
+  <!-- loggers to see Inbound and Outbound messages in Citrus-->
+  <logger name="Logger.Message_IN" level="DEBUG" />
+  <logger name="Logger.Message_OUT" level="DEBUG" />
+
+  <!-- Debug Camel -->
+  <logger name="org.apache.camel" level="${log.level.camel:-INFO}"/>
+
+  <logger name="com.smartsparrow.export" level="${log.level.export:-INFO}" />
+
+  <logger name="org.redisson" level="${log.level.redisson:-INFO}"/>
+
+  <logger name="com.smartsparrow.dse.wiring.CassandraModule" level="${log.level.cassandra:-INFO}"/>
+
+  <!-- Plugin loggers for workspace and learnspace -->
+  <logger name="com.smartsparrow.rtm.message.handler.plugin.WorkspacePluginLogMessageHandler" level="${log.level.plugin.workspace:-DEBUG}"/>
+
+  <logger name="com.smartsparrow.rtm.message.handler.plugin.LearnspacePluginLogMessageHandler" level="${log.level.plugin.learnspace:-DEBUG}"/>
+
+  <root level="${log.level.root:-INFO}">
+    <appender-ref ref="console"/>
+  </root>
+</configuration>
+

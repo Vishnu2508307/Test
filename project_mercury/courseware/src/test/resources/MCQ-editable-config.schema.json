@@ -1,0 +1,29 @@
+{
+  "items": {
+    "type": "list",
+    "listType": "text",
+    "label": "items"
+  },
+  "selection": {
+    "type": "list",
+    "listType": "text",
+    "learnerEditable": true,
+    "label": "selection"
+  },
+  "options": {
+    "type": "group",
+    "flat": true,
+    "properties": {
+      "allowMultipleSelections": {
+        "type": "boolean",
+        "default": false,
+        "label": "allow mulit-select"
+      },
+      "layout": {
+        "type": "enum",
+        "items": [ "vertical", "horizontal" ],
+        "default": "vertical"
+      }
+    }
+  }
+}

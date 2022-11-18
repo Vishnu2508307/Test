@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<tt xml:lang="en" xmlns:tts="http://www.w3.org/ns/ttml#styling" xmlns:ttm="http://www.w3.org/ns/ttml#metadata" xmlns="http://www.w3.org/ns/ttml">
+  <head>
+    <metadata>
+      <ttm:title>Example.ttml</ttm:title>
+    </metadata>
+    <styling>
+      <style xml:id="basic" tts:textAlign="center" />
+    </styling>
+  </head>
+  <body style="basic">
+    <div>
+      <p begin="00:00:00.187" end="00:00:02.958">(airplane jet engine)</p>
+      <p begin="00:00:02.958" end="00:00:07.474">(bright music plays)</p>
+      <p begin="00:00:09.474" end="00:00:11.120">- Really just stumbled<br />on them through a website</p>
+    </div>
+  </body>
+</tt>

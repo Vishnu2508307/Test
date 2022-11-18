@@ -1,0 +1,3 @@
+const data =
+	'{"bearerToken":"qaLtUBOdTwa809A0vFUwKI6tJlqH9vYI","ingestionSummary":{"id":"d4134870-1624-11ec-852e-292bf36311a4","projectId":"e36dbf40-e4eb-11eb-b44d-6f9cc57279a4","workspaceId":"d3dd0710-7305-11ea-8c12-fb04008554b5","courseName":"failed_ingestionh","configFields":"[{}]","creatorId":"6cfcbcb0-294f-11eb-b97c-392f64b29607","ambrosiaUrl":"https://ingestion-ap-southeast-2-bronte-pearsondev-tech.s3.ap-southeast-2.amazonaws.com/ingestion/d4134870-1624-11ec-852e-292bf36311a4/ebook.json","status":"ANALYZING","ingestionStats":"{\\"Markup\\":65,\\"Improper Table Markup\\":24}","rootElementId":null}}';
+console.log(JSON.parse(data));

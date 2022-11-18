@@ -1,0 +1,180 @@
+#ununununununununununununununununununununununu
+#
+# begin of standard generic makefile code
+#
+#ununununununununununununununununununununununu
+
+# COLORS {BRNT-2790 : aws-eng-infra }
+GREEN  := $(shell tput -Txterm setaf 2)
+YELLOW := $(shell tput -Txterm setaf 3)
+BLUE   := $(shell tput -Txterm setaf 4)
+RESET  := $(shell tput -Txterm sgr0)
+
+SHELL  := /bin/bash
+
+NETWORK_NAME=tooling
+ROLE=terraform
+TARGET_MAX_CHAR_NUM=20
+IMAGE_TAG=latest
+TERRAFORM_VERSION=0.11
+
+ifndef TERRAFORM_VERSION
+TERRAFORM_VERSION=0.11
+endif
+
+## Show Available Tasks:
+help:
+	@echo ''
+	@echo 'Usage:'
+	@awk '/^[a-zA-Z\-\_0-9]+:/ { \
+		helpMessage = match(lastLine, /^## (.*)/); \
+		Params = match(lastLine, / @/); \
+		if (helpMessage) { \
+			helpCommand = substr($$1, 1, index($$1, ":")-1); \
+			if (Params) { \
+				Params = substr(lastLine, index(lastLine, "@")); \
+			} \
+			else { \
+				Params = " "; \
+			} \
+			helpMessage = substr(lastLine, 3, index(lastLine, ":")-3); \
+			printf " ${YELLOW}make %-$(TARGET_MAX_CHAR_NUM)s${RESET} ${BLUE}%-120s${RESET} ${GREEN}%s${RESET}\n", helpCommand, Params, helpMessage; \
+		} \
+	} \
+	{ lastLine = $$0 }' $(MAKEFILE_LIST)
+
+validate_input:
+ifndef REGION_SCOPE
+    $(error REGION_SCOPE is not set)
+endif
+ifndef ENV
+	$(error ENV is not set)
+endif
+
+# assign env
+ifeq (${ENV}, dev)
+ACCOUNT_ID = 716062133555
+MAIN_REGION = ap-southeast-2
+else ifeq (${ENV}, qaint)
+ACCOUNT_ID = 658380148811
+MAIN_REGION = us-east-1
+else ifeq (${ENV}, stg)
+ACCOUNT_ID = 324267317821
+MAIN_REGION = us-east-1
+else ifeq (${ENV}, ppe)
+ACCOUNT_ID = 443982649941
+MAIN_REGION = us-east-1
+else ifeq (${ENV}, prod)
+ACCOUNT_ID = 591900134539
+MAIN_REGION = us-west-1
+endif
+
+ifeq (${REGION_SCOPE}, global)
+REGION=${MAIN_REGION}
+else
+REGION=${REGION_SCOPE}
+endif
+
+#ununununununununununununununununununununununu
+#
+# begin of standard local makefile code
+#
+#ununununununununununununununununununununununu
+
+PROFILE=${ACCOUNT_ID}PCMPowerUser
+ECR_REPO=${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com
+
+ECR_TOOLING_NAME=devops/tools
+TOOLING_IMAGE=${ECR_REPO}/${ECR_TOOLING_NAME}:${IMAGE_TAG}${TERRAFORM_VERSION}
+
+terraform_cleanup := rm -rf .terraform
+
+# check if run is for the local state file target
+ifeq (${MAKECMDGOALS}, bootstrap)
+terraform_preflight_check := terraform --version && terraform init && terraform get
+else
+terraform_preflight_check := terraform --version && \
+  terraform init \
+    --upgrade \
+    --backend-config="role_arn=arn:aws:iam::${ACCOUNT_ID}:role/${ROLE}" \
+    --backend-config="session_name=targets_${ENV}_${ROLE}" && \
+  terraform get
+endif
+
+ifeq ($(ACTION), apply)
+terraform_action := terraform apply /terraform/build/targets-${ENV}-${MAKECMDGOALS}-${REGION_SCOPE}.plan
+else ifeq ($(ACTION), destroy)
+terraform_action := terraform destroy \
+  -var-file="/terraform/targets/variables/common.tfvars" \
+  -var-file="/terraform/targets/variables/${ENV}.tfvars" \
+  -var REGION=${REGION} \
+  -var ENV=${ENV} \
+  -var release_version='${RELEASE_VERSION}'
+else ifeq ($(ACTION), plan)
+terraform_action := terraform plan \
+  -var-file="/terraform/targets/variables/common.tfvars" \
+  -var-file="/terraform/targets/variables/${ENV}.tfvars" \
+  -var REGION=${REGION} \
+  -var ENV=${ENV} \
+  -var release_version='${RELEASE_VERSION}' \
+  -out=/terraform/build/targets-${ENV}-${MAKECMDGOALS}-${REGION_SCOPE}.plan
+endif
+
+# you may need to adjust the order between ${ENV} and ${REGIONS_SCOPE} based on this repository's particular folder structure
+terraform_dir := /terraform/targets/${ENV}/${REGION_SCOPE}/${MAKECMDGOALS}
+
+docker_action = @docker run --rm \
+                  -e AWS_ACCESS_KEY_ID=$(shell jq .AccessKeyId ~/.aws/.aws_saml_role_${PROFILE}) \
+                  -e AWS_SECRET_ACCESS_KEY=$(shell jq .SecretAccessKey ~/.aws/.aws_saml_role_${PROFILE}) \
+                  -e AWS_SESSION_TOKEN=$(shell jq .SessionToken ~/.aws/.aws_saml_role_${PROFILE}) \
+                  --network=${NETWORK_NAME} \
+                  -v ${PWD}:/terraform \
+                  -w ${terraform_dir} \
+                  -it ${TOOLING_IMAGE} \
+                  /bin/sh -c "pwd && ${terraform_cleanup} && ${terraform_preflight_check} && ${terraform_action}"
+
+authenticate:
+	$$(aws-runas ${PROFILE} | grep -v " MFA ")
+
+assume_role: authenticate
+	$(eval AWS_ACCESS_KEY_ID=$(shell jq .AccessKeyId ~/.aws/.aws_saml_role_${PROFILE}))
+	$(eval AWS_SECRET_ACCESS_KEY=$(shell jq .SecretAccessKey ~/.aws/.aws_saml_role_${PROFILE}))
+	$(eval AWS_SESSION_TOKEN=$(shell jq .SessionToken ~/.aws/.aws_saml_role_${PROFILE}))
+
+## Creates a new docker network for the tooling docker vm to use:
+init_network:
+	docker network create -d bridge ${NETWORK_NAME} --opt com.docker.network.bridge.enable_ip_masquerade=true
+
+## Manage ecr_login: @ENV=(dev|qaint|ppe|stg|prod|) @REGION_SCOPE=(ap-southeast-2|us-east-1|us-west-1) @ACTION=(plan|apply|destroy)
+ecr_login:
+	@docker login --username AWS --password $$(aws-runas ${PROFILE} aws ecr get-login-password --region ${REGION} | grep -v " MFA "  2>&1) ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com
+
+#ununununununununununununununununununununununu
+#
+# begin of project-specific targets block
+#
+#ununununununununununununununununununununununu
+
+## Action terraform on cache: @ENV=(dev|qaint|ppe|stg|prod) @REGION=(ap-southeast-2|us-east-1|us-west-1) @ACTION=(plan|apply|destroy)
+cache: validate_input
+	${docker_action}
+
+## Action terraform on mercury: @ENV=(dev|qaint|ppe|stg|prod) @REGION=(ap-southeast-2|us-east-1|us-west-1) @ACTION=(plan|apply|destroy)
+mercury: validate_input
+	${docker_action}
+
+## Action terraform on ext-http: @ENV=(dev|qaint|ppe|stg|prod) @REGION=(ap-southeast-2|us-east-1|us-west-1) @ACTION=(plan|apply|destroy)
+ext-http: validate_input
+	${docker_action}
+
+## Action terraform on ambrosia-export: @ENV=(dev|qaint|ppe|stg|prod) @REGION=(ap-southeast-2|us-east-1|us-west-1) @ACTION=(plan|apply|destroy)
+ambrosia-export: validate_input
+	${docker_action}
+
+## Action terraform on ingestion: @ENV=(dev|qaint|ppe|stg|prod) @REGION=(ap-southeast-2|us-east-1|us-west-1) @ACTION=(plan|apply|destroy)
+ingestion: validate_input
+	${docker_action}
+
+## Action terraform on asset: @ENV=(dev|qaint|ppe|stg|prod) @REGION=(ap-southeast-2|us-east-1|us-west-1) @ACTION=(plan|apply|destroy)
+asset: validate_input
+	${docker_action}

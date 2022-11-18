@@ -1,0 +1,1 @@
+DROP TABLE courseware.component_by_interactive;

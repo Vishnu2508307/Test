@@ -1,0 +1,20 @@
+dependencies {
+    compile project(':cache')
+    compile project(':common')
+    compile project(':dataevent')
+    compile project(':dse')
+    compile project(':iam')
+    compile project(':config')
+    compile project(':amazon')
+
+    implementation 'com.akamai:edgeauth:0.2.0'
+    compile 'javax.xml.bind:jaxb-api:2.3.0'
+
+    // Same as dataevents
+    testCompile 'org.apache.camel:camel-test:2.23.1'
+
+}
+
+test {
+    useJUnitPlatform()
+}

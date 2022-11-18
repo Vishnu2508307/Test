@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS learner.redeemed_voucher_by_cohort;

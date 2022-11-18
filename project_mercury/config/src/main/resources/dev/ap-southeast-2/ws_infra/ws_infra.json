@@ -1,0 +1,199 @@
+{
+  "plugin.infra" : {
+    "distribution.bucketName": "dev-aero-plugin.ap-southeast-2.bronte.dev-prsn.com/distribution",
+    "repository.bucketName": "dev-aero-plugin.ap-southeast-2.bronte.dev-prsn.com/repository",
+    "distribution.publicUrl": "https://plugin-distribution-bronte-dev.pearson.com",
+    "repository.publicUrl": "https://plugin-repository-bronte-dev.pearson.com"
+  },
+  "schemas.infra" : {
+    "bucketName" : "dev-aero-plugin.ap-southeast-2.bronte.dev-prsn.com",
+    "prefix":"schemas"
+  },
+  "assets.infra" : {
+    "bucketName" : "dev-aero.ap-southeast-2.bronte.dev-prsn.com",
+    "prefix":"assets",
+    "publicUrl":"https://assets-bronte-dev.pearson.com",
+    "submitTopicNameOrArn": "courseware-asset-resize-submit",
+    "delayQueueNameOrArn": "courseware-asset-resize-retry-delay",
+    "alfrescoUrl": "https://usppewip.cms.pearson.com",
+    "alfrescoPushDelayTime": 10
+  },
+  "routeConsumers.infra" : {
+    "leanerEvaluateCompleteConsumers": 16,
+    "learnerStudentScopeSetConsumers": 4,
+    "leanerProgressBroadcastConsumers": 4,
+    "competencyDocumentUpdateConsumers": 1
+  },
+  "redis.infra" : {
+    "address":"rediss://master.dev-mercury.a2hwhq.apse2.cache.amazonaws.com:6379",
+    "password":"Uy2y8jkxPk9RxmRs4YBQrZkBnNbpYkpF"
+  },
+  "cache.infra" : {
+    "enableLearnerCache": true
+  },
+  "sso_oidc.infra" : {
+    "redirectUrl": "https://dev-aero.global.ssl.fastly.net/sso/oidc/to",
+    "callbackUrl": "https://dev-aero.global.ssl.fastly.net/sso/oidc/callback"
+  },
+  "sso_ies.infra" : {
+    "baseUrl": "https://tst-piapi-internal.dev-openclass.com"
+  },
+  "sso_mycloud.infra" : {
+    "baseUrl": "https://identity-internal-test.pearson.com"
+  },
+  "sso_registrar.infra" : {
+    "baseUrl": "https://user-association-qa.dev-prsn.com"
+  },
+  "passport.infra" : {
+    "baseUrl": "https://passport.dev-openclass.com"
+  },
+  "braintree.infra" : {
+    "environment": "sandbox",
+    "merchantId": "nnnz6ywxkthv7vk5",
+    "publicKey": "92fvzc8t4955jqm5",
+    "privateKey": "71a53ffbd700bb0795e47ba43f8c8e44",
+    "merchantAccountsByCurrency": {
+      "AUD":"smartSparrowAUD",
+      "USD":"dj397dhnxzb4ww88"
+    }
+  },
+  "system_credentials.infra" : {
+    "userId": "ffffffff5eb5bc8f5d2f5b01312aa65e",
+    "password": "ZbY58cH2gdbxFgsCnyVvyWdJNduRLgne",
+    "username": "gpd_bronte_system",
+    "environment": "INT"
+  },
+  "cassandra.infra" : {
+    "contactPoints":["10.87.16.11", "10.87.16.93", "10.87.16.59"],
+    "username":"cassandra",
+    "password":"cassandra",
+    "localMaxRequestsPerConnection": 2048,
+    "maxQueueSize": 512,
+    "certificate":"-----BEGIN CERTIFICATE-----
+    MIIFsTCCA5mgAwIBAgIBATANBgkqhkiG9w0BAQsFADB6MQswCQYDVQQGEwJBVTEe
+    MBwGA1UECgwVSW5zdGFjbHVzdHIgUHR5LiBMdGQuMREwDwYDVQQLDAhDbHVzdGVy
+    czE4MDYGA1UEAwwvQ2x1c3RlciAzOWVlZjIwOS1kYzE5LTRkMGYtOWYyMi00MjVh
+    ZThjOGRhMmQgQ0EwHhcNMjEwMjEwMDQxMTQwWhcNMzEwMjEwMDAwMDAwWjB6MQsw
+    CQYDVQQGEwJBVTEeMBwGA1UECgwVSW5zdGFjbHVzdHIgUHR5LiBMdGQuMREwDwYD
+    VQQLDAhDbHVzdGVyczE4MDYGA1UEAwwvQ2x1c3RlciAzOWVlZjIwOS1kYzE5LTRk
+    MGYtOWYyMi00MjVhZThjOGRhMmQgQ0EwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAw
+    ggIKAoICAQDe9XK8tA/ByDCs4XkKVGIxFmDWPWhWMIN/QoLMOeyp/LUpy4CYCA++
+    LDiCccdGhE5FMderx7/MKq3WY6l34OUXR08BxnRPwMtyBNAEIpp/408QuRB6WLm2
+    aaA09aUOoDvegj4Jh1HbYYHrTJKMaUz4p2W95YPdIKPCm0orXlJgW4QvfvoeRYg4
+    Olk3Zk/h6QU7FChlIr9iekgCxaCEylj+N/irJzCHRT5EVKdrMGI6oX4nSpv9R6eh
+    PhsJ15/4iitqCwZDORp+qMRTP7/8UxROdrw031woWrTcw1b/m7oxXRbl7wOwvH2H
+    gj1U+g16jkmaPVNsB5KE6TxCJrHOaiIkovJJPHMzuZUVbudr82IuV/epyv5e98kp
+    ohk2jJ9TJzu85/zuEI7lBAF0GUX4in/Z3axvl+jCMVpz9KfglMuXWvLBlB/2dMUt
+    fsZuLpXVxSAFI/hDYp0XODpTc7t5jl8BHVX7kC4N6oRC0046BJ9xY/320mUMToDb
+    iQChx4MoyrzJNa/kZ8VpIhM2KIs6rYSSkKCNuyvbHsHTiI3mKDbCSLlQQMlUcgP8
+    bEC7G8q1xtzK6lJoGZDdmyzvxUP+zm+jAVr01Cj5HnHZMkTn2mpzULlK23iszsBL
+    b8+19YoQ3hHdnDLGUHLnGUnMo307tNZfDScnfphzWVRL94dGlytyBwIDAQABo0Iw
+    QDAdBgNVHQ4EFgQUS/JDkjnfeCSJYn03rtKdpTZogMYwDwYDVR0TAQH/BAUwAwEB
+    /zAOBgNVHQ8BAf8EBAMCAQYwDQYJKoZIhvcNAQELBQADggIBAI95IGS8uDuQO9VM
+    Rha4tJcueCjYcYWrqrcjgPdooDn6fvvePnS1CHDFg8TEwJf304PiILIBT4E08w2Z
+    4EvMW43+hfEPJRmDNgBD/fyI0F9pCFQ1HCgt3jZhQOUjxzDBvav8RImgZw+Lh2p6
+    v/koHa0TzXD6bQ7PvvUzvCjXhl8fzqL20laoEii7b6TjVfwS2+2SqNeu/EKRDAEP
+    DVcQxZEaIVOf+ZiJLaVSPNgVbUBpsvdvfMC62m84cHKxk+rao2g2cxQOZ7s7JSvz
+    rtfSDYDyO8kT01Ofsr8Z2l9/nZB958gbrtRrHa+0BIBW+xv6jCZGKzWDwGOqtyAJ
+    +4RiFtOBPDLd/SZ6JOYL7JBd2PTeIou/8GpmhfvmCu8gwcrk4j3yKAPvJvpAkkPk
+    +zLeJ7/5GPl4p79OPn9Ge427+pUyMumjXwbNt1MKdF8ogod9RR3EIaGntQ0GuHM5
+    dszZlBPSCpgwbv0i6Doo8XekfAQyUw/qDeSufU+gDz1AsGFV1LRlr+k75Mc3pSEl
+    Rq6lD68wt806BoUnqplIMlzQBuov5xLA3gsZmEuQ27yea5LsAehxdQcHQolyJKep
+    cq/g+YBM3m4oXVtD6QZl/Xz9JNgNE41MFUR+T9hPIbVWHJCDoO5lfp/80vxwXJ3g
+    c/oUc/fUKi8H+1OXOxZxYLGfbmwa
+    -----END CERTIFICATE-----"
+  },
+  "ext_http.infra" :{
+    "submitTopicNameOrArn": "ext-http-submit",
+    "delayQueueNameOrArn": "ext-http-delay-queue"
+  },
+  "learning_analytics.infra" : {
+    "adminBaseURL": "https://messaging-admin-int.dev-prsn.com",
+    "appName": "gpd_bronte_system",
+    "originatingSystemCode": "Bronte",
+    "statusBaseURL": "https://messaging-status-int.dev-prsn.com",
+    "publishBaseURL": "https://messaging-publishing-int.dev-prsn.com",
+    "schemaRegistryBaseURL": "https://messaging-registry.prd-prsn.com",
+    "autobahnEnvironment": "INT"
+  },
+  "csg.infra" : {
+    "indexUri": "https://dragonfly-qa.stg-openclass.com/pxereader-cm/2.1/api/cm/documents",
+    "applicationId": "bronte",
+    "enabled": true,
+    "batchSize": 20,
+    "completionTime": 2500
+  },
+  "plp_sqs.infra" : {
+    "queueName": "BRNT-DEV",
+    "region": "us-east-2",
+    "queueOwnerAWSAccountId": "815492460363",
+    "enabled": "true"
+  },
+  "courseware_export.infra" : {
+    "submitTopicNameOrArn": "courseware-element-to-ambrosia-submit",
+    "resultQueueName": "courseware-element-to-ambrosia-result",
+    "errorQueueName": "courseware-element-to-ambrosia-error",
+    "delayQueueNameOrArn": "courseware-element-to-ambrosia-retry-delay",
+    "bucketName": "workspace.ap-southeast-2.bronte.dev-prsn.com/export",
+    "snippetBucketName": "ambrosia-snippet.ap-southeast-2.bronte.dev-prsn.com",
+    "bucketUrl": "https://workspace-bronte-dev.pearson.com/export",
+    "concurrentConsumers": 5,
+    "maxMessagesPerPoll": 1,
+    "waitTimeSeconds": 10
+  },
+  "self_ingestion.infra" : {
+    "adapterEpubQueueNameOrArn": "ingestion-adapter-epub-submit",
+    "adapterDocxQueueNameOrArn": "ingestion-adapter-docx-submit",
+    "ambrosiaIngestionQueueNameOrArn": "ingestion-ambrosia-submit",
+    "ingestionCancelQueueNameOrArn": "ingestion-cancel-submit",
+    "bucketName": "ingestion-ap-southeast-2-bronte-pearsondev-tech",
+    "bucketUrl": "https://ingestion-bronte-dev.pearson.com"
+  },
+  "plugin_log.infra" : {
+    "enabled": false,
+    "bucketConfigs": [
+      {
+        "tableName":"generic_log_statement_by_plugin",
+        "maxRecordCount":1000,
+        "retentionPolicy":"WEEK",
+        "logBucketInstances": 5
+      },
+      {
+        "tableName":"workspace_log_statement_by_plugin",
+        "maxRecordCount":1000,
+        "retentionPolicy":"WEEK",
+        "logBucketInstances": 5
+      },
+      {
+        "tableName":"learnspace_log_statement_by_plugin",
+        "maxRecordCount":1000,
+        "retentionPolicy":"WEEK",
+        "logBucketInstances": 5
+      }
+    ]
+  },
+  "oculus.infra" : {
+    "baseUrl": "https://paperapi.stg-openclass.com"
+  },
+  "math.infra" : {
+    "mathMLUri": "https://www.wiris.net",
+    "mathMLPath": "/demo/plugins/app/showimage",
+    "metrics": true,
+    "centerbaseline": false,
+    "bucketName" : "dev-aero.ap-southeast-2.bronte.dev-prsn.com",
+    "submitTopicNameOrArn": "math-asset-resolver-submit",
+    "delayQueueNameOrArn": "math-asset-resolver-retry-delay",
+    "enabled": true
+  },
+  "grade_passback.infra" : {
+    "masteringGradeSyncUrl": "https://api.staging.mastering.pearsoncmg.com",
+    "checkGradePassbackQuestionCount": true
+  },
+  "publish_metadata.infra" : {
+    "masteringLabMetadataUrl": "https://bronteil.mx-dev.pearsondev.tech/bronteil-service/labMetadata"
+  },
+  "lti_credentials.infra" : {
+    "key": "Qa2ptmoNWTMcqlN8FgpGvk7PcVO6JBsQ",
+    "secret": "RRRzJfQ9c6g_aWrRgkX9psKAKiwntFiCJ1k-5ItfRK0bOgv1"
+  }
+}

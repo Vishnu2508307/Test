@@ -1,0 +1,129 @@
+<!-- This file is intended to be used as a template -->
+<html lang="en">
+<head>
+    <title>IES session initializer</title>
+</head>
+<body>
+    <input type="hidden" id="pi_user_id"/>
+    <!--  hidden form to submit to launch-request-continue  -->
+    <form id="postBack" method="POST" enctype="application/x-www-form-urlencoded">
+        <input hidden type="text" name="hash" value="${hash}"/>
+        <input hidden type="text" name="launchRequestId" value="${launchRequestId}"/>
+        <input id="userIdInput" hidden type="text" name="piUserId" />
+        <input id="tokenInput" hidden type="text" name="piToken" />
+        <input hidden type="submit" value="Submit" />
+    </form>
+    <script src="/cfg/index.js"></script>
+    <script type="text/javascript">
+        let checkSessionInterval;
+        let currentAttempt = 1;
+        const maxAttempt = 6;
+
+        /**
+         * Initializes session
+         *
+         * @param clientId the application client id
+         */
+        function initializeSession(clientId) {
+            if (window.piSession) {
+                console.time("initializeSession");
+                console.debug('window.piSession found');
+
+                // initialize session
+                window.piSession.initialize(clientId, {
+                    // do not ask the user the authenticate if there is no token
+                    // this means a valid session doesn't exist, creating a new session is not
+                    // in scope for this initialization page
+                    requireLogin: false
+                });
+
+                // attach SessionStateKnownEvent to detect initialization completes
+                window.piSession.on(window.piSession.SessionStateKnownEvent, () => {
+                    console.timeEnd("initializeSession");
+                    console.time("checkValidSession");
+                    // check for valid session with grace period and retry if not success
+                    // doesn't wait for grace period
+
+                    // setTimeout(() => {
+                    //     window.piSession.getToken(getTokenCallback);
+                    // }, 3000);
+
+                    // using time interval to determine how much time it actually needs to process the session
+                    checkSessionInterval = setInterval(() => checkValidSession(), 500);
+                });
+            } else {
+                console.debug('window.piSession not found');
+            }
+        }
+
+        /**
+         * Checks if session is valid
+         * when session is valid, clears time interval and gets token
+         */
+        function checkValidSession() {
+            if (currentAttempt === maxAttempt) {
+                console.timeEnd("checkValidSession");
+                console.debug('session does not exists');
+                clearInterval(checkSessionInterval);
+                return;
+            }
+            if (window.piSession.hasValidSession(3) === piSession.Success){
+                console.timeEnd("checkValidSession");
+                clearInterval(checkSessionInterval);
+                window.piSession.getToken(getTokenCallback);
+            }
+            currentAttempt++;
+        }
+
+        /**
+         * Callback that handles the getToken response.
+         */
+        function getTokenCallback(status, pearsonToken) {
+            console.debug('status: ', status);
+            const pearsonUid = window.piSession.userId();
+            if (status === window.piSession.Success) {
+                console.debug('session exists');
+                // post back to mercury
+                postBack(pearsonUid, pearsonToken);
+            }
+        }
+
+        /**
+         * Access the html form and inputs to set the proper values, then submits the form
+         *
+         * @param userId the user id
+         * @param token the token
+         * @returns void
+         */
+        function postBack(userId, token) {
+            const form = document.getElementById("postBack");
+            const userInput = document.getElementById("userIdInput");
+            const tokenInput = document.getElementById("tokenInput");
+
+            userInput.value = userId;
+            tokenInput.value = token;
+            form.action = window.location.origin + "/sso/lti-1-1/launch-request-continue";
+            form.submit();
+        }
+    </script>
+    <script>
+        window.onload = () => {
+            (function() {
+                function addScript () {
+                    const sessionJSPath = window.appConfig.getPILoginURL() + '/js/v2/session.js';
+                    const clientId = window.appConfig.getPIClientID();
+                    const scriptTag = document.createElement('script');
+                    scriptTag.setAttribute('type', 'text/javascript');
+                    scriptTag.setAttribute('src', sessionJSPath);
+                    scriptTag.setAttribute('id', 'pi-session-js');
+                    scriptTag.addEventListener('load', (event) => {
+                        initializeSession(clientId);
+                    });
+                    document.body.appendChild(scriptTag);
+                }
+                addScript();
+            })();
+        }
+    </script>
+</body>
+</html>

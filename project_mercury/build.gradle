@@ -1,0 +1,220 @@
+plugins {
+    id 'java'
+    id 'com.github.ben-manes.versions' version '0.22.0'
+    id 'org.ajoberstar.release-opinion' version '1.7.2'
+    id 'com.github.johnrengelman.shadow' version '6.1.0'
+    id 'org.ajoberstar.grgit' version '1.7.2'
+    id 'com.github.spotbugs' version '4.6.0'
+    id 'com.github.jk1.dependency-license-report' version '1.9'
+    id 'org.sonarqube' version '3.1.1'
+}
+
+group 'com.smartsparrow'
+
+allprojects {
+    apply plugin: 'java'
+    apply plugin: 'jacoco'
+
+    apply from: "${rootDir}/repositories.gradle"
+    repositories repos
+
+    jacoco {
+        toolVersion = '0.8.3'
+    }
+
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: "com.github.spotbugs"
+    apply plugin: "org.sonarqube"
+
+    sourceCompatibility = 1.9
+
+    apply from: "${rootDir}/repositories.gradle"
+    repositories repos
+
+    dependencies {
+        // Logging
+        compile 'ch.qos.logback:logback-core:1.2.3'
+        compile 'ch.qos.logback:logback-classic:1.2.3'
+        compile 'org.slf4j:slf4j-api:1.7.30'
+        compile group: 'org.codehaus.janino', name: 'janino', version: '3.1.0'
+
+        // Guice
+        compile 'com.google.inject:guice:4.2.3'
+        compile 'com.google.inject.extensions:guice-multibindings:4.2.3'
+        compile 'com.google.inject.extensions:guice-servlet:4.2.3'
+        compile 'com.google.guava:guava:28.2-jre'
+
+        // Reactor
+        compile "io.projectreactor:reactor-core:3.2.5.RELEASE"
+
+        //For suppress FindBugs warnings
+        compile group: 'com.google.code.findbugs', name: 'findbugs', version: '3.0.1'
+
+        testCompile("io.projectreactor:reactor-test:3.2.5.RELEASE")
+
+        //Collection Utils
+        compile group: 'org.apache.commons', name: 'commons-collections4', version: '4.2'
+
+        compile group: 'com.google.inject.extensions', name: 'guice-assistedinject', version: '4.0'
+
+        // Testing
+        testCompile 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+        testRuntime 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+        testCompile 'org.junit.jupiter:junit-jupiter-params:5.7.0'
+        testCompile 'org.assertj:assertj-core:3.18.1'
+        testCompile 'org.mockito:mockito-core:3.6.0'
+        testCompile 'org.mockito:mockito-inline:3.6.0'
+    }
+
+    buildscript {
+        repositories {
+            jcenter()
+            maven {
+                url "https://plugins.gradle.org/m2/"
+            }
+        }
+        dependencies {
+            classpath 'org.junit.platform:junit-platform-gradle-plugin:1.2.0'
+            classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:3.1.1"
+        }
+    }
+
+    compileJava {
+        options.encoding = 'UTF-8'
+        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-parameters"
+    }
+    compileTestJava {
+        options.encoding = 'UTF-8'
+        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-parameters"
+    }
+
+    // ./gradlew               # to be failed
+    // ./gradlew -PignoreBugs  # do not failed on found bugs
+    spotbugs {
+        toolVersion = '4.2.0'
+        effort = "max"
+        ignoreFailures = project.findProperty('ignoreBugs') != null
+    }
+
+    tasks.withType(com.github.spotbugs.snom.SpotBugsTask) {
+        reports {
+            xml.enabled = false
+            html.enabled = true
+        }
+    }
+
+    sonarqube {
+        properties {
+            System.setProperty('sonar.host.url', 'https://sonarqube.pearson-pso.io')
+            System.setProperty('sonar.login', 'afd170229f088264a0d3720685213b453b4b4045')
+            System.setProperty('sonar.projectKey', 'bronte')
+        }
+    }
+
+    jacocoTestReport {
+        additionalSourceDirs.from = files(sourceSets.main.allSource.srcDirs)
+        sourceDirectories.from = files(sourceSets.main.allSource.srcDirs)
+        classDirectories.from =  files(sourceSets.main.output)
+        reports {
+            html.enabled = true
+            xml.enabled = true
+            csv.enabled = true
+        }
+    }
+}
+
+
+release {
+    grgit = org.ajoberstar.grgit.Grgit.open(project.projectDir)
+}
+
+// Release plugin using classic gradle-git plugin, configure here which steps the release task depend on
+tasks.release.dependsOn subprojects*.tasks*.findByName('build').minus(null)
+
+
+//
+// when running './gradlew dependencyUpdates' reject certain "releases".
+// the plugin assumes that something published to a public repo (and not a snapshot) is a "release".
+//
+dependencyUpdates.resolutionStrategy = {
+    componentSelection { rules ->
+        rules.all { ComponentSelection selection ->
+            boolean rejected = ['alpha', 'beta', 'b', 'rc', 'cr', 'm', 'M'].any { qualifier ->
+                selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
+            }
+            if (rejected) {
+                selection.reject('Release candidate')
+            }
+        }
+    }
+}
+
+dependencyUpdates.outputFormatter = { result ->
+    def updatable = result.outdated.dependencies
+    if (!updatable.isEmpty()){
+        println '-----------------------------------------'
+        println '|           NEW RELEASES FOR            |'
+        println '-----------------------------------------'
+
+        updatable.each { dependency ->
+            def writer = new StringWriter()
+            writer.append('\'')
+            writer.append(dependency.group.toString())
+            writer.append(':')
+            writer.append(dependency.name.toString())
+            writer.append(':')
+            writer.append(dependency.available.release ?: dependency.available.milestone)
+            writer.append('\'')
+            writer.append(' [current version: ' + dependency.version.toString() + ']')
+
+            println writer.toString()
+        }
+    }
+}
+
+task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
+    dependsOn = subprojects.test
+    additionalSourceDirs.from = files(subprojects.sourceSets.main.allSource.srcDirs)
+    sourceDirectories.from = files(subprojects.sourceSets.main.allSource.srcDirs)
+    classDirectories.from =  files(subprojects.sourceSets.main.output)
+    // only take projects that created an test.exec file
+    executionData.from = files(subprojects.jacocoTestReport.executionData).filter {it.exists() && it.name.endsWith(".exec")}
+    reports {
+        html.enabled = true
+        xml.enabled = true
+        csv.enabled = true
+    }
+
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it,
+                    // exclude files that are not really expected to have tests.
+                    // this should be moved to an annotation, see: https://github.com/jacoco/jacoco/wiki/FilteringOptions#annotation-based-filtering
+                    exclude: ['**/*Exception.*',
+                              '**/*Fault.*',
+                              '**/*Gateway.*',
+                              '**/*Materializer.*',
+                              '**/*Mutator.*',
+                              '**/*Module*.*',
+                              '**/*Provider.*',
+                              '**/*Message.*',
+                              '**/*Input.*',
+                              '**/*Config.*',
+                    ])
+        }))
+    }
+}
+// run this task as a finalizer to the test
+// https://reflectoring.io/jacoco/
+test.finalizedBy jacocoRootReport
+
+// https://github.com/jk1/Gradle-License-Report
+// render the license report as a CSV : https://idle.run/license-report
+import com.github.jk1.license.render.*
+licenseReport {
+    renderer = new CsvReportRenderer()
+    configurations = ['compile']
+}

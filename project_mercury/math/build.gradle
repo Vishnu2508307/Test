@@ -1,0 +1,11 @@
+dependencies {
+    compile project(':common')
+    compile project(':dse')
+    compile project(':dataevent')
+    compile project(':config')
+    compile project(':asset')
+}
+
+test {
+    useJUnitPlatform()
+}

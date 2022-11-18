@@ -1,0 +1,262 @@
+#
+# This file represents the pipeline template for deploying mercury
+#
+stages:
+  - dryrun
+  - change
+  - deploy
+  - ticketing
+
+include:
+  - project: 'pearsontechnology/gpt/bronte/pipeline/bronte-pipeline-template'
+    file: '/workflow-default.gitlab-ci.yml'
+
+#
+# Runs a terraform plan for the workspace and learner clusters
+#
+dryrun:terraform:changes:
+  stage: dryrun
+  tags:
+    - VAR_TERRAFORM_RUNNER
+  resource_group: VAR_ENV
+  allow_failure: false
+  interruptible: true
+  script:
+    - set -e
+    - cd terraform
+    - make mercury ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=plan
+  when: VAR_WHEN
+  artifacts:
+    expire_in: 1 week and 3 days
+    paths:
+      - terraform/build/*.plan
+      - terraform/build/*.zip
+
+#
+# Runs a terraform plan for the workspace and learner clusters
+#
+dryrun:terraform-legacy:changes:
+  stage: dryrun
+  tags:
+    - VAR_TERRAFORM_LEGACY_RUNNER
+  resource_group: VAR_ENV-legacy
+  allow_failure: false
+  interruptible: true
+  script:
+    - set -e
+    - cd terraform-legacy
+    - make cache           ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=plan
+    - make mercury         ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=plan
+    - make ext-http        ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=plan
+    - make ambrosia-export ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=plan
+    - make ingestion       ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=plan
+    - make asset           ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=plan
+  when: VAR_WHEN
+  artifacts:
+    expire_in: 1 week and 3 days
+    paths:
+      - terraform-legacy/build/*.plan
+      - terraform-legacy/build/*.zip
+
+#
+# Tests connectivity to cassandra endpoints
+#
+dryrun:cassandra:connection:
+  stage: dryrun
+  tags:
+    - VAR_CQLSH_RUNNER
+  resource_group: VAR_ENV
+  interruptible: true
+  script:
+    - set -e
+    - echo -e "[ssl]\nversion = SSLv23\n[cql]\nversion = 3.4.4\n[connection]\nfactory = cqlshlib.ssl.ssl_transport_factory\n" > cqlshrc.cfg
+    - 'aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:VAR_REGION:VAR_ACCOUNT_ID:secret:/VAR_ENV/aero/bastion/ssh_key" --region VAR_REGION --query "SecretString" --output text > gateway.pem'
+    - chmod 0400 gateway.pem
+    - export SSL_CERTFILE=etc/tls/dse/VAR_ENV/cassandra.pem
+    - |
+      ssh -4 -o StrictHostKeyChecking=no -i gateway.pem -f -L 9042:VAR_CASSANDRA_ENDPOINT:9042 pcm_user@VAR_CASSANDRA_GATEWAY sleep 30 &
+      cqlsh --debug --ssl --cqlshrc=cqlshrc.cfg -u cassandra -p cassandra --connect-timeout=10 127.0.0.1 9042 -e 'describe keyspaces;'
+    - rm -f gateway.pem
+  when: VAR_WHEN
+
+#
+# Runs an output from schema changes
+#
+dryrun:schema:changes:
+  stage: dryrun
+  tags:
+    - VAR_OPENJDK_RUNNER
+  resource_group: VAR_ENV
+  allow_failure: false
+  interruptible: true
+  script:
+    - set -e
+    - 'aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:VAR_REGION:VAR_ACCOUNT_ID:secret:/VAR_ENV/aero/bastion/ssh_key" --region VAR_REGION --query "SecretString" --output text > gateway.pem'
+    - 'CASSANDRA_TRUSTSTORE_PASSWORD=$(aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:VAR_REGION:VAR_ACCOUNT_ID:secret:/VAR_ENV/aero/mercury/cassandra/truststore_password" --region VAR_REGION --query "SecretString" --output text) CURRENT_VERSION=VAR_CURRENT_VERSION CASSANDRA_ENDPOINT_IP=VAR_CASSANDRA_ENDPOINT CASSANDRA_GATEWAY=VAR_CASSANDRA_GATEWAY CASSANDRA_GATEWAY_KEY=${PWD}/gateway.pem ./gradlew schemas:outputSchemaChanges -Penvironment=VAR_ENV -Dorg.gradle.daemon=false | tee -a schema_changes.cql'
+    - if [[ -f schema_changes.cql && -s schema_changes.cql ]]; then cat schema_changes.cql; else echo "No changes."; fi
+    - unset CASSANDRA_TRUSTSTORE_PASSWORD
+    - rm -f gateway.pem
+  when: VAR_WHEN
+
+#
+# Applies the database schema changes
+#
+apply:schema:changes:
+  stage: change
+  tags:
+    - VAR_OPENJDK_RUNNER
+  resource_group: VAR_ENV
+  allow_failure: false
+  interruptible: false
+  needs:
+    - job: dryrun:schema:changes
+      artifacts: false
+    - job: dryrun:terraform:changes
+      artifacts: false
+    - job: dryrun:terraform-legacy:changes
+      artifacts: false
+  dependencies:
+    - dryrun:schema:changes
+    - dryrun:terraform-legacy:changes
+    - dryrun:terraform:changes
+  script:
+    - set -e
+    - 'aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:VAR_REGION:VAR_ACCOUNT_ID:secret:/VAR_ENV/aero/bastion/ssh_key" --region VAR_REGION --query "SecretString" --output text > gateway.pem'
+    - 'CASSANDRA_TRUSTSTORE_PASSWORD=$(aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:VAR_REGION:VAR_ACCOUNT_ID:secret:/VAR_ENV/aero/mercury/cassandra/truststore_password" --region VAR_REGION --query "SecretString" --output text) CURRENT_VERSION=VAR_CURRENT_VERSION CASSANDRA_ENDPOINT_IP=VAR_CASSANDRA_ENDPOINT CASSANDRA_GATEWAY=VAR_CASSANDRA_GATEWAY CASSANDRA_GATEWAY_KEY=${PWD}/gateway.pem ./gradlew schemas:applySchemaChanges -Penvironment=VAR_ENV'
+    - unset CASSANDRA_TRUSTSTORE_PASSWORD
+    - rm -f gateway.pem
+  when: on_success
+
+#
+# Applies the configuration changes (only when changes are detected)
+#
+apply:config:changes:
+  stage: change
+  tags:
+    - VAR_CQLSH_RUNNER
+  resource_group: VAR_ENV
+  allow_failure: false
+  interruptible: false
+  needs:
+    - job: dryrun:schema:changes
+      artifacts: false
+    - job: dryrun:terraform:changes
+      artifacts: false
+    - job: dryrun:terraform-legacy:changes
+      artifacts: false
+  dependencies:
+    - dryrun:schema:changes
+    - dryrun:terraform-legacy:changes
+    - dryrun:terraform:changes
+  script:
+    - set -e
+    - echo -e "[ssl]\nversion = SSLv23\n[cql]\nversion = 3.4.4\n[connection]\nfactory = cqlshlib.ssl.ssl_transport_factory\n" > cqlshrc.cfg
+    - 'aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:VAR_REGION:VAR_ACCOUNT_ID:secret:/VAR_ENV/aero/bastion/ssh_key" --region VAR_REGION --query "SecretString" --output text > gateway.pem'
+    - chmod 0400 gateway.pem
+    - export SSL_CERTFILE=etc/tls/dse/VAR_ENV/cassandra.pem
+    - 'ssh -4 -o StrictHostKeyChecking=no -i gateway.pem -f -L 9042:VAR_CASSANDRA_ENDPOINT:9042 pcm_user@VAR_CASSANDRA_GATEWAY sleep 30'
+    - cqlsh --debug --ssl --cqlshrc=cqlshrc.cfg -u cassandra -p cassandra --connect-timeout=10 127.0.0.1 9042 -f schemas/src/main/resources/cassandra/data/configuration-VAR_ENV.cql
+    - rm -f gateway.pem
+  when: on_success
+
+#
+# Deploys the mercury services for the workspace and learner clusters
+#
+apply:terraform:changes:
+  stage: deploy
+  tags:
+    - VAR_TERRAFORM_RUNNER
+  resource_group: VAR_ENV
+  allow_failure: false
+  interruptible: false
+  needs:
+    - dryrun:terraform:changes
+    - apply:schema:changes
+  dependencies:
+    - dryrun:terraform:changes
+    - apply:schema:changes
+  script:
+    - set -e
+    - cd terraform
+    - make mercury ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=apply
+  when: on_success
+
+#
+# Deploys the mercury services for the workspace and learner clusters
+#
+apply:terraform-legacy:changes:
+  stage: deploy
+  tags:
+    - VAR_TERRAFORM_LEGACY_RUNNER
+  resource_group: VAR_ENV-legacy
+  allow_failure: false
+  interruptible: false
+  needs:
+    - dryrun:terraform-legacy:changes
+    - apply:schema:changes
+  dependencies:
+    - dryrun:terraform-legacy:changes
+    - apply:schema:changes
+  script:
+    - set -e
+    - cd terraform-legacy
+    - make cache           ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=apply
+    - make mercury         ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=apply
+    - make ext-http        ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=apply
+    - make ambrosia-export ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=apply
+    - make ingestion       ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=apply
+    - make asset           ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=apply
+  when: on_success
+
+#
+# Labels jira tickets with deployed environment
+#
+jira:label:
+  stage: ticketing
+  tags:
+    - VAR_GENERIC_ALPINE_RUNNER
+  resource_group: VAR_ENV
+  allow_failure: true
+  interruptible: true
+  needs:
+    - pipeline: "VAR_CI_PIPELINE_ID"
+      job: jira:fetch
+      artifacts: true
+    - job: apply:terraform:changes
+      artifacts: false
+    - job: apply:terraform-legacy:changes
+      artifacts: false
+  dependencies:
+    - apply:terraform:changes
+    - apply:terraform-legacy:changes
+  script:
+    - set -e
+    - 'JIRA_USER="$(aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:VAR_REGION:VAR_ACCOUNT_ID:secret:/jira/jira" --region VAR_REGION --query "SecretString" --output text | jq -r ".user")"'
+    - 'JIRA_TOKEN="$(aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:VAR_REGION:VAR_ACCOUNT_ID:secret:/jira/jira" --region VAR_REGION --query "SecretString" --output text | jq -r ".password")"'
+    - 'ENV_UPPER="$(echo "VAR_ENV" | tr "[:lower:]" "[:upper:]")"'
+    - cat build/jira_parse/jira_tickets
+    - |
+      if [[ -f build/jira_parse/jira_tickets ]] && [[ -s build/jira_parse/jira_tickets ]]; then
+        while IFS="" read -r ticket_id && [ -n "${ticket_id}" ]
+        do
+          echo "Labelling Jira ticket ${ticket_id}"
+          curl --request PUT \
+               --url "https://agile-jira-test.pearson.com/rest/api/2/issue/${ticket_id}" \
+               --user "${JIRA_USER}:${JIRA_TOKEN}" \
+               --header "Accept: application/json" \
+               --header "Content-Type: application/json" \
+               --data "{\"update\":{\"labels\":[{\"add\":\"${ENV_UPPER}\"}]}}"
+          if [[ "VAR_CI_COMMIT_REF_NAME" != "main" ]]; then
+            curl --request PUT \
+                 --url "https://agile-jira-test.pearson.com/rest/api/2/issue/${ticket_id}" \
+                 --user "${JIRA_USER}:${JIRA_TOKEN}" \
+                 --header "Accept: application/json" \
+                 --header "Content-Type: application/json" \
+                 --data "{\"update\":{\"fixVersions\":[{\"add\":{\"name\":\"VAR_CI_COMMIT_REF_NAME\"}}]}}"
+          fi
+        done < build/jira_parse/jira_tickets
+      else
+        echo "Could not find valid Jira branch names in this release."
+      fi
+    - unset JIRA_USER JIRA_TOKEN
+  when: on_success

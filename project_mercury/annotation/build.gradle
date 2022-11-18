@@ -1,0 +1,9 @@
+
+dependencies {
+    compile project(':common')
+    compile project(':dse')
+}
+
+test {
+    useJUnitPlatform()
+}

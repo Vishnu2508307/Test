@@ -1,0 +1,2149 @@
+package com.smartsparrow.wiring.rtm;
+
+import static com.smartsparrow.rtm.message.handler.AssumeTokenMessageHandler.IAM_ASSUME_TOKEN;
+import static com.smartsparrow.rtm.message.handler.CreateLTICredentialPluginMessageHandler.LTI_CREDENTIAL_CREATE;
+import static com.smartsparrow.rtm.message.handler.CreateOIDCProviderMessageHandler.IAM_OIDC_PROVIDER_CREATE;
+import static com.smartsparrow.rtm.message.handler.DelayedMessageHandler.DELAY;
+import static com.smartsparrow.rtm.message.handler.DeleteLTICredentialPluginMessageHandler.LTI_CREDENTIAL_DELETE;
+import static com.smartsparrow.rtm.message.handler.DeveloperKeyProvisionMessageHandler.IAM_DEVKEY_CREATE;
+import static com.smartsparrow.rtm.message.handler.GetAssetMessageHandler.AUTHOR_ASSET_GET;
+import static com.smartsparrow.rtm.message.handler.GraphQLQueryMessageHandler.GRAPHQL_QUERY;
+import static com.smartsparrow.rtm.message.handler.LTIConsumerKeyCreateMessageHandler.IAM_LTI_CONSUMER_KEY_CREATE;
+import static com.smartsparrow.rtm.message.handler.SetAvatarMessageHandler.ME_AVATAR_SET;
+import static com.smartsparrow.rtm.message.handler.TimeMessageHandler.TIME;
+import static com.smartsparrow.rtm.message.handler.TimeSubscribeMessageHandler.TIME_SUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.TimeUnsubscribeMessageHandler.TIME_UNSUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.asset.AlfrescoAssetsProgressMessageHandler.AUTHOR_ALFRESCO_ASSETS_PROGRESS;
+import static com.smartsparrow.rtm.message.handler.asset.AlfrescoAssetsPullMessageHandler.AUTHOR_ALFRESCO_ASSETS_SYNC;
+import static com.smartsparrow.rtm.message.handler.asset.AlfrescoAssetsPushCountMessageHandler.AUTHOR_ALFRESCO_ASSETS_PUSH_COUNT;
+import static com.smartsparrow.rtm.message.handler.asset.AlfrescoAssetsPushMessageHandler.AUTHOR_ALFRESCO_ASSETS_PUSH;
+import static com.smartsparrow.rtm.message.handler.asset.CreateAssetMessageHandler.AUTHOR_ASSET_CREATE;
+import static com.smartsparrow.rtm.message.handler.asset.CreateAssetSignatureConfigMessageHandler.ASSET_SIGNATURE_CONFIG_CREATE;
+import static com.smartsparrow.rtm.message.handler.asset.DeleteAssetSignatureConfigMessageHandler.ASSET_SIGNATURE_CONFIG_DELETE;
+import static com.smartsparrow.rtm.message.handler.asset.DeleteIconAssetsMessageHandler.AUTHOR_ICON_ASSET_DELETE;
+import static com.smartsparrow.rtm.message.handler.asset.ListAssetMessageHandler.AUTHOR_ASSET_LIST;
+import static com.smartsparrow.rtm.message.handler.asset.ListIconAssetMessageHandler.AUTHOR_ICON_ASSET_LIST;
+import static com.smartsparrow.rtm.message.handler.asset.SelectAlfrescoAssetMessageHandler.AUTHOR_ALFRESCO_ASSET_SELECT;
+import static com.smartsparrow.rtm.message.handler.asset.UpdateAssetMetadataMessageHandler.AUTHOR_ASSET_METADATA_UPDATE;
+import static com.smartsparrow.rtm.message.handler.cohort.ArchiveCohortMessageHandler.WORKSPACE_COHORT_ARCHIVE;
+import static com.smartsparrow.rtm.message.handler.cohort.ChangeCohortMessageHandler.WORKSPACE_COHORT_CHANGE;
+import static com.smartsparrow.rtm.message.handler.cohort.CohortAccountSummaryMessageHandler.WORKSPACE_COHORT_COLLABORATOR_SUMMARY;
+import static com.smartsparrow.rtm.message.handler.cohort.CohortDisenrollAccountMessageHandler.WORKSPACE_COHORT_ACCOUNT_DISENROLL;
+import static com.smartsparrow.rtm.message.handler.cohort.CohortEnrollAccountMessageHandler.WORKSPACE_COHORT_ACCOUNT_ENROLL;
+import static com.smartsparrow.rtm.message.handler.cohort.CohortEnrollmentListMessageHandler.WORKSPACE_COHORT_ENROLLMENT_LIST;
+import static com.smartsparrow.rtm.message.handler.cohort.CohortListMessageHandler.WORKSPACE_COHORT_LIST;
+import static com.smartsparrow.rtm.message.handler.cohort.CohortSubscribeMessageHandler.WORKSPACE_COHORT_SUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.cohort.CohortUnsubscribeMessageHandler.WORKSPACE_COHORT_UNSUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.cohort.CreateCohortMessageHandler.WORKSPACE_COHORT_CREATE;
+import static com.smartsparrow.rtm.message.handler.cohort.GetCohortMessageHandler.WORKSPACE_COHORT_GET;
+import static com.smartsparrow.rtm.message.handler.cohort.GrantCohortPermissionMessageHandler.WORKSPACE_COHORT_PERMISSION_GRANT;
+import static com.smartsparrow.rtm.message.handler.cohort.ListDeploymentMessageHandler.WORKSPACE_DEPLOYMENT_LIST;
+import static com.smartsparrow.rtm.message.handler.cohort.RevokeCohortPermissionMessageHandler.WORKSPACE_COHORT_PERMISSION_REVOKE;
+import static com.smartsparrow.rtm.message.handler.cohort.UnarchiveCohortMessageHandler.WORKSPACE_COHORT_UNARCHIVE;
+import static com.smartsparrow.rtm.message.handler.competency.CompetencyDocumentSubscribeMessageHandler.COMPETENCY_DOCUMENT_SUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.competency.CompetencyDocumentUnsubscribeMessageHandler.COMPETENCY_DOCUMENT_UNSUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.competency.GrantDocumentPermissionMessageHandler.WORKSPACE_COMPETENCY_PERMISSION_GRANT;
+import static com.smartsparrow.rtm.message.handler.competency.ListCompetencyDocumentCollaboratorMessageHandler.WORKSPACE_COMPETENCY_COLLABORATOR_SUMMARY;
+import static com.smartsparrow.rtm.message.handler.competency.RevokeDocumentPermissionMessageHandler.WORKSPACE_COMPETENCY_PERMISSION_REVOKE;
+import static com.smartsparrow.rtm.message.handler.courseware.AddAssetMessageHandler.AUTHOR_COURSEWARE_ASSET_ADD;
+import static com.smartsparrow.rtm.message.handler.courseware.CoursewareBreadcrumbMessageHandler.AUTHOR_COURSEWARE_BREADCRUMB;
+import static com.smartsparrow.rtm.message.handler.courseware.CoursewareElementDescriptionMessageHandler.COURSEWARE_DESCRIPTION_SET;
+import static com.smartsparrow.rtm.message.handler.courseware.CoursewareEvaluableMessageHandler.AUTHOR_EVALUABLE_SET;
+import static com.smartsparrow.rtm.message.handler.courseware.FindCoursewareProjectSummaryMessageHandler.AUTHOR_COURSEWARE_PROJECT_FIND;
+import static com.smartsparrow.rtm.message.handler.courseware.GetCoursewareElementMetaInformationMessageHandler.WORKSPACE_COURSEWARE_ELEMENT_INFO_GET;
+import static com.smartsparrow.rtm.message.handler.courseware.GetCoursewareEvaluableMessageHandler.AUTHOR_EVALUABLE_GET;
+import static com.smartsparrow.rtm.message.handler.courseware.GetCoursewareStructureMessageHandler.COURSEWARE_STRUCTURE_GET;
+import static com.smartsparrow.rtm.message.handler.courseware.GetCoursewareStructureNavigateMessageHandler.COURSEWARE_STRUCTURE_NAVIGATE;
+import static com.smartsparrow.rtm.message.handler.courseware.GetCoursewareSupportStructureMessageHandler.SUPPORT_COURSEWARE_STRUCTURE_GET;
+import static com.smartsparrow.rtm.message.handler.courseware.ListAccountSummaryMessageHandler.AUTHOR_ACCOUNT_SUMMARY_LIST;
+import static com.smartsparrow.rtm.message.handler.courseware.RemoveAssetMessageHandler.AUTHOR_COURSEWARE_ASSET_REMOVE;
+import static com.smartsparrow.rtm.message.handler.courseware.RemoveAssetsMessageHandler.AUTHOR_COURSEWARE_ASSETS_REMOVE;
+import static com.smartsparrow.rtm.message.handler.courseware.SetCoursewareElementMetaInformationMessageHandler.WORKSPACE_COURSEWARE_ELEMENT_INFO_SET;
+import static com.smartsparrow.rtm.message.handler.courseware.activity.ActivityChangeLogSubscribeMessageHandler.ACTIVITY_CHANGELOG_SUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.courseware.activity.ActivityChangeLogUnsubscribeMessageHandler.ACTIVITY_CHANGELOG_UNSUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.courseware.activity.ActivitySubscribeMessageHandler.AUTHOR_ACTIVITY_SUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.courseware.activity.ActivityUnsubscribeMessageHandler.AUTHOR_ACTIVITY_UNSUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.courseware.activity.CreateActivityMessageHandler.AUTHOR_ACTIVITY_CREATE;
+import static com.smartsparrow.rtm.message.handler.courseware.activity.DeleteActivityMessageHandler.AUTHOR_ACTIVITY_DELETE;
+import static com.smartsparrow.rtm.message.handler.courseware.activity.DuplicateActivityMessageHandler.AUTHOR_ACTIVITY_DUPLICATE;
+import static com.smartsparrow.rtm.message.handler.courseware.activity.DuplicateActivityProjectMessageHandler.PROJECT_ACTIVITY_DUPLICATE;
+import static com.smartsparrow.rtm.message.handler.courseware.activity.GetActivityMessageHandler.AUTHOR_ACTIVITY_GET;
+import static com.smartsparrow.rtm.message.handler.courseware.activity.MoveActivityMessageHandler.AUTHOR_ACTIVITY_MOVE;
+import static com.smartsparrow.rtm.message.handler.courseware.activity.PublishProjectActivityMessageHandler.PROJECT_ACTIVITY_PUBLISH;
+import static com.smartsparrow.rtm.message.handler.courseware.activity.ReplaceActivityConfigMessageHandler.AUTHOR_ACTIVITY_CONFIG_REPLACE;
+import static com.smartsparrow.rtm.message.handler.courseware.activity.ReplaceActivityThemeMessageHandler.AUTHOR_ACTIVITY_THEME_REPLACE;
+import static com.smartsparrow.rtm.message.handler.courseware.annotation.AggregateCoursewareAnnotationMessageHandler.AUTHOR_ANNOTATION_AGGREGATE;
+import static com.smartsparrow.rtm.message.handler.courseware.annotation.CreateCoursewareAnnotationMessageHandler.AUTHOR_ANNOTATION_CREATE;
+import static com.smartsparrow.rtm.message.handler.courseware.annotation.DeleteCoursewareAnnotationMessageHandler.AUTHOR_ANNOTATION_DELETE;
+import static com.smartsparrow.rtm.message.handler.courseware.annotation.GetCoursewareAnnotationMessageHandler.AUTHOR_ANNOTATION_GET;
+import static com.smartsparrow.rtm.message.handler.courseware.annotation.ListCoursewareAnnotationMessageHandler.AUTHOR_ANNOTATION_LIST;
+import static com.smartsparrow.rtm.message.handler.courseware.annotation.ReadCoursewareAnnotationMessageHandler.AUTHOR_ANNOTATION_READ;
+import static com.smartsparrow.rtm.message.handler.courseware.annotation.ResolveCoursewareAnnotationMessageHandler.AUTHOR_ANNOTATION_RESOLVE;
+import static com.smartsparrow.rtm.message.handler.courseware.annotation.UpdateCoursewareAnnotationMessageHandler.AUTHOR_ANNOTATION_UPDATE;
+import static com.smartsparrow.rtm.message.handler.courseware.changelog.ListElementChangeLogMessageHandler.ELEMENT_CHANGELOG_LIST;
+import static com.smartsparrow.rtm.message.handler.courseware.changelog.ListProjectChangeLogMessageHandler.PROJECT_CHANGELOG_LIST;
+import static com.smartsparrow.rtm.message.handler.courseware.component.CreateActivityComponentMessageHandler.AUTHOR_ACTIVITY_COMPONENT_CREATE;
+import static com.smartsparrow.rtm.message.handler.courseware.component.CreateInteractiveComponentMessageHandler.AUTHOR_INTERACTIVE_COMPONENT_CREATE;
+import static com.smartsparrow.rtm.message.handler.courseware.component.DeleteActivityComponentMessageHandler.AUTHOR_ACTIVITY_COMPONENT_DELETE;
+import static com.smartsparrow.rtm.message.handler.courseware.component.DeleteInteractiveComponentMessageHandler.AUTHOR_INTERACTIVE_COMPONENT_DELETE;
+import static com.smartsparrow.rtm.message.handler.courseware.component.DeleteInteractiveComponentsMessageHandler.AUTHOR_INTERACTIVE_COMPONENTS_DELETE;
+import static com.smartsparrow.rtm.message.handler.courseware.component.DeleteManualGradingConfigurationMessageHandler.AUTHOR_COMPONENT_MANUAL_GRADING_CONFIGURATION_DELETE;
+import static com.smartsparrow.rtm.message.handler.courseware.component.GetComponentMessageHandler.AUTHOR_COMPONENT_GET;
+import static com.smartsparrow.rtm.message.handler.courseware.component.GetManualGradingConfigurationMessageHandler.AUTHOR_COMPONENT_MANUAL_GRADING_CONFIGURATION_GET;
+import static com.smartsparrow.rtm.message.handler.courseware.component.MoveComponentsMessageHandler.AUTHOR_COMPONENTS_MOVE;
+import static com.smartsparrow.rtm.message.handler.courseware.component.ReplaceComponentConfigMessageHandler.AUTHOR_COMPONENT_REPLACE;
+import static com.smartsparrow.rtm.message.handler.courseware.component.RestoreInteractiveComponentMessageHandler.AUTHOR_INTERACTIVE_COMPONENT_RESTORE;
+import static com.smartsparrow.rtm.message.handler.courseware.component.SetManualGradeConfigurationMessageHandler.AUTHOR_COMPONENT_MANUAL_GRADING_CONFIGURATION_SET;
+import static com.smartsparrow.rtm.message.handler.courseware.export.ActivityExportRequestMessageHandler.AUTHOR_EXPORT_REQUEST;
+import static com.smartsparrow.rtm.message.handler.courseware.export.ActivityExportSubscribeMessageHandler.AUTHOR_EXPORT_SUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.courseware.export.ActivityExportUnsubscribeMessageHandler.AUTHOR_EXPORT_UNSUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.courseware.export.ElementExportRequestMessageHandler.AUTHOR_ELEMENT_EXPORT_REQUEST;
+import static com.smartsparrow.rtm.message.handler.courseware.export.ExportErrorMessageHandler.AUTHOR_ELEMENT_EXPORT_ERROR_RESULT;
+import static com.smartsparrow.rtm.message.handler.courseware.export.ProjectExportListMessageHandler.PROJECT_EXPORT_LIST;
+import static com.smartsparrow.rtm.message.handler.courseware.export.WorkspaceExportListMessageHandler.WORKSPACE_EXPORT_LIST;
+import static com.smartsparrow.rtm.message.handler.courseware.feedback.CreateInteractiveFeedbackMessageHandler.AUTHOR_INTERACTIVE_FEEDBACK_CREATE;
+import static com.smartsparrow.rtm.message.handler.courseware.feedback.DeleteInteractiveFeedbackMessageHandler.AUTHOR_INTERACTIVE_FEEDBACK_DELETE;
+import static com.smartsparrow.rtm.message.handler.courseware.feedback.GetInteractiveFeedbackMessageHandler.AUTHOR_INTERACTIVE_FEEDBACK_GET;
+import static com.smartsparrow.rtm.message.handler.courseware.feedback.ReplaceInteractiveFeedbackConfigMessageHandler.AUTHOR_INTERACTIVE_FEEDBACK_REPLACE;
+import static com.smartsparrow.rtm.message.handler.courseware.feedback.ReplacePathwayConfigMessageHandler.AUTHOR_PATHWAY_CONFIG_REPLACE;
+import static com.smartsparrow.rtm.message.handler.courseware.interactive.CreateInteractiveMessageHandler.AUTHOR_INTERACTIVE_CREATE;
+import static com.smartsparrow.rtm.message.handler.courseware.interactive.DeleteInteractiveMessageHandler.AUTHOR_INTERACTIVE_DELETE;
+import static com.smartsparrow.rtm.message.handler.courseware.interactive.DuplicateInteractiveMessageHandler.AUTHOR_INTERACTIVE_DUPLICATE;
+import static com.smartsparrow.rtm.message.handler.courseware.interactive.GetInteractiveMessageHandler.AUTHOR_INTERACTIVE_GET;
+import static com.smartsparrow.rtm.message.handler.courseware.interactive.InteractiveScenariosTestMessageHandler.AUTHOR_INTERACTIVE_SCENARIOS_TEST;
+import static com.smartsparrow.rtm.message.handler.courseware.interactive.MoveInteractiveMessageHandler.AUTHOR_INTERACTIVE_MOVE;
+import static com.smartsparrow.rtm.message.handler.courseware.interactive.ReplaceInteractiveConfigMessageHandler.AUTHOR_INTERACTIVE_CONFIG_REPLACE;
+import static com.smartsparrow.rtm.message.handler.courseware.pathway.CreatePathwayMessageHandler.AUTHOR_PATHWAY_CREATE;
+import static com.smartsparrow.rtm.message.handler.courseware.pathway.DeletePathwayMessageHandler.AUTHOR_PATHWAY_DELETE;
+import static com.smartsparrow.rtm.message.handler.courseware.pathway.GetPathwayMessageHandler.AUTHOR_PATHWAY_GET;
+import static com.smartsparrow.rtm.message.handler.courseware.pathway.ReorderWalkableMessageHandler.AUTHOR_WALKABLE_REORDER;
+import static com.smartsparrow.rtm.message.handler.courseware.publication.CreatePublicationRequestMessageHandler.PUBLICATION_CREATE_REQUEST;
+import static com.smartsparrow.rtm.message.handler.courseware.publication.UpdatePublicationTitleRequestMessageHandler.PUBLICATION_UPDATE_TITLE_REQUEST;
+import static com.smartsparrow.rtm.message.handler.courseware.publication.ListPublicationRequestMessageHandler.PUBLICATION_LIST_REQUEST;
+import static com.smartsparrow.rtm.message.handler.courseware.publication.PublicationActivityFetchMessageHandler.PUBLICATION_ACTIVITY_FETCH;
+import static com.smartsparrow.rtm.message.handler.courseware.publication.PublicationHistoryDeleteMessageHandler.PUBLICATION_HISTORY_DELETE;
+import static com.smartsparrow.rtm.message.handler.courseware.publication.PublicationHistoryFetchMessageHandler.PUBLICATION_HISTORY_FETCH;
+import static com.smartsparrow.rtm.message.handler.courseware.publication.PublicationJobSubscribeMessageHandler.PUBLICATION_JOB_SUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.courseware.publication.PublicationJobUnsubscribeMessageHandler.PUBLICATION_JOB_UNSUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.courseware.publication.PublicationOculusStatusMessageHandler.PUBLICATION_OCULUS_STATUS;
+import static com.smartsparrow.rtm.message.handler.courseware.publication.PublishClassOnDemandMessageHandler.PUBLICATION_CLASSONDEMAND_PUBLISH_REQUEST;
+import static com.smartsparrow.rtm.message.handler.courseware.publication.PublishPearsonPlusMessageHandler.PUBLICATION_PEARSON_PLUS_PUBLISH_REQUEST;
+import static com.smartsparrow.rtm.message.handler.courseware.scenario.CreateScenarioMessageHandler.AUTHOR_SCENARIO_CREATE;
+import static com.smartsparrow.rtm.message.handler.courseware.scenario.ListScenarioMessageHandler.AUTHOR_SCENARIO_LIST;
+import static com.smartsparrow.rtm.message.handler.courseware.scenario.ReorderScenariosMessageHandler.AUTHOR_SCENARIOS_REORDER;
+import static com.smartsparrow.rtm.message.handler.courseware.scenario.ReplaceScenarioMessageHandler.AUTHOR_SCENARIO_REPLACE;
+import static com.smartsparrow.rtm.message.handler.courseware.scope.DeRegisterFromStudentScopeMessageHandler.AUTHOR_STUDENT_SCOPE_DEREGISTER;
+import static com.smartsparrow.rtm.message.handler.courseware.scope.ListSourcesRegisteredToScopeMessageHandler.AUTHOR_SOURCE_SCOPE_LIST;
+import static com.smartsparrow.rtm.message.handler.courseware.scope.RegisterToStudentScopeMessageHandler.AUTHOR_STUDENT_SCOPE_REGISTER;
+import static com.smartsparrow.rtm.message.handler.courseware.theme.AssociateActivityThemeIconLibraryMessageHandler.AUTHOR_ACTIVITY_ICON_LIBRARY_ASSOCIATE;
+import static com.smartsparrow.rtm.message.handler.courseware.theme.AssociateThemeIconLibraryMessageHandler.AUTHOR_THEME_ICON_LIBRARY_ASSOCIATE;
+import static com.smartsparrow.rtm.message.handler.courseware.theme.AuthorGetThemeVariantMessageHandler.AUTHOR_THEME_VARIANT_GET;
+import static com.smartsparrow.rtm.message.handler.courseware.theme.CreateCoursewareThemeMessageHandler.AUTHOR_THEME_CREATE;
+import static com.smartsparrow.rtm.message.handler.courseware.theme.CreateElementThemeMessageHandler.AUTHOR_ELEMENT_THEME_CREATE;
+import static com.smartsparrow.rtm.message.handler.courseware.theme.CreateThemeVariantMessageHandler.AUTHOR_THEME_VARIANT_CREATE;
+import static com.smartsparrow.rtm.message.handler.courseware.theme.DeleteCoursewareThemeMessageHandler.AUTHOR_THEME_DELETE;
+import static com.smartsparrow.rtm.message.handler.courseware.theme.DeleteElementThemeMessageHandler.AUTHOR_ELEMENT_THEME_DELETE;
+import static com.smartsparrow.rtm.message.handler.courseware.theme.DeleteThemeVariantMessageHandler.AUTHOR_THEME_VARIANT_DELETE;
+import static com.smartsparrow.rtm.message.handler.courseware.theme.GrantThemePermissionMessageHandler.THEME_PERMISSION_GRANT;
+import static com.smartsparrow.rtm.message.handler.courseware.theme.ListCoursewareThemeMessageHandler.AUTHOR_THEME_LIST;
+import static com.smartsparrow.rtm.message.handler.courseware.theme.ListThemeCollaboratorMessageHandler.AUTHOR_THEME_COLLABORATOR_SUMMARY;
+import static com.smartsparrow.rtm.message.handler.courseware.theme.RevokeThemePermissionMessageHandler.THEME_PERMISSION_REVOKE;
+import static com.smartsparrow.rtm.message.handler.courseware.theme.UpdateCoursewareThemeMessageHandler.AUTHOR_THEME_UPDATE;
+import static com.smartsparrow.rtm.message.handler.courseware.theme.UpdateThemeVariantMessageHandler.AUTHOR_THEME_VARIANT_UPDATE;
+import static com.smartsparrow.rtm.message.handler.courseware.theme.WorkspaceGetThemeVariantMessageHandler.WORKSPACE_THEME_VARIANT_GET;
+import static com.smartsparrow.rtm.message.handler.diffsync.DiffSyncAckMessageHandler.DIFF_SYNC_ACK;
+import static com.smartsparrow.rtm.message.handler.diffsync.DiffSyncEndMessageHandler.DIFF_SYNC_END;
+import static com.smartsparrow.rtm.message.handler.diffsync.DiffSyncPatchMessageHandler.DIFF_SYNC_PATCH;
+import static com.smartsparrow.rtm.message.handler.diffsync.DiffSyncStartMessageHandler.DIFF_SYNC_START;
+import static com.smartsparrow.rtm.message.handler.iam.AccountProvisionMessageHandler.IAM_INSTRUCTOR_PROVISION;
+import static com.smartsparrow.rtm.message.handler.iam.AccountProvisionMessageHandler.IAM_STUDENT_PROVISION;
+import static com.smartsparrow.rtm.message.handler.iam.AccountProvisionSubscribeHandler.IAM_ACCOUNT_PROVISION_SUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.iam.AccountSubscriptionMigrateMessageHandler.IAM_ACCOUNT_SUBSCRIPTION_MIGRATE;
+import static com.smartsparrow.rtm.message.handler.iam.AddRoleMessageHandler.IAM_ADD_ROLE;
+import static com.smartsparrow.rtm.message.handler.iam.AddShadowAttributeMessageHandler.IAM_SHADOW_ATTRIBUTE_ADD;
+import static com.smartsparrow.rtm.message.handler.iam.GrantSubscriptionPermissionMessageHandler.IAM_SUBSCRIPTION_PERMISSION_GRANT;
+import static com.smartsparrow.rtm.message.handler.iam.ListCredentialMessageHandler.IAM_CREDENTIAL_LIST;
+import static com.smartsparrow.rtm.message.handler.iam.ListUserMessageHandler.IAM_SUBSCRIPTION_USER_LIST;
+import static com.smartsparrow.rtm.message.handler.iam.MyCloudAuthorizeMessageHandler.MYCLOUD_AUTHORIZE;
+import static com.smartsparrow.rtm.message.handler.iam.RemoveRoleMessageHandler.IAM_REMOVE_ROLE;
+import static com.smartsparrow.rtm.message.handler.iam.RemoveShadowAttributeMessageHandler.IAM_SHADOW_ATTRIBUTE_REMOVE;
+import static com.smartsparrow.rtm.message.handler.iam.SetAccountPasswordMessageHandler.IAM_ACCOUNT_PASSWORD_SET;
+import static com.smartsparrow.rtm.message.handler.iam.SetPasswordMessageHandler.IAM_PASSWORD_SET;
+import static com.smartsparrow.rtm.message.handler.iam.SubscriptionAccountProvisionMessageHandler.IAM_SUBSCRIPTION_USER_PROVISION;
+import static com.smartsparrow.rtm.message.handler.iam.SubscriptionCollaboratorSummaryMessageHandler.IAM_SUBSCRIPTION_COLLABORATOR_SUMMARY;
+import static com.smartsparrow.rtm.message.handler.ingestion.IngestionSubscribeMessageHandler.PROJECT_INGEST_SUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.ingestion.IngestionUnsubscribeMessageHandler.PROJECT_INGEST_UNSUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.ingestion.ProjectIngestionCreateMessageHandler.PROJECT_INGESTION_CREATE;
+import static com.smartsparrow.rtm.message.handler.ingestion.ProjectIngestionDeleteMessageHandler.PROJECT_INGESTION_DELETE;
+import static com.smartsparrow.rtm.message.handler.ingestion.ProjectIngestionGetMessageHandler.PROJECT_INGESTION_GET;
+import static com.smartsparrow.rtm.message.handler.ingestion.ProjectIngestionListMessageHandler.PROJECT_INGESTION_LIST;
+import static com.smartsparrow.rtm.message.handler.ingestion.ProjectIngestionLogListMessageHandler.PROJECT_INGESTION_LOG_LIST;
+import static com.smartsparrow.rtm.message.handler.ingestion.ProjectIngestionRequestMessageHandler.PROJECT_INGESTION_REQUEST;
+import static com.smartsparrow.rtm.message.handler.ingestion.ProjectIngestionRootGetMessageHandler.PROJECT_INGESTION_ROOT_GET;
+import static com.smartsparrow.rtm.message.handler.ingestion.ProjectIngestionStartMessageHandler.PROJECT_INGESTION_START;
+import static com.smartsparrow.rtm.message.handler.ingestion.ProjectIngestionUpdateMessageHandler.PROJECT_INGESTION_UPDATE;
+import static com.smartsparrow.rtm.message.handler.math.MathAssetCreateMessageHandler.AUTHOR_MATH_ASSET_CREATE;
+import static com.smartsparrow.rtm.message.handler.math.MathAssetGetMessageHandler.AUTHOR_MATH_ASSET_GET;
+import static com.smartsparrow.rtm.message.handler.math.RemoveMathAssetMessageHandler.AUTHOR_MATH_ASSET_REMOVE;
+import static com.smartsparrow.rtm.message.handler.plugin.CreatePluginMessageHandler.WORKSPACE_PLUGIN_CREATE;
+import static com.smartsparrow.rtm.message.handler.plugin.DeletePluginMessageHandler.WORKSPACE_PLUGIN_DELETE;
+import static com.smartsparrow.rtm.message.handler.plugin.DeletePluginVersionMessageHandler.AUTHOR_PLUGIN_VERSION_DELETE;
+import static com.smartsparrow.rtm.message.handler.plugin.GetPluginInfoMessageHandler.WORKSPACE_PLUGIN_GET;
+import static com.smartsparrow.rtm.message.handler.plugin.GetPluginVersionsMessageHandler.WORKSPACE_PLUGIN_VERSION_LIST;
+import static com.smartsparrow.rtm.message.handler.plugin.GetPluginsListMessageHandler.AUTHOR_PLUGIN_LIST;
+import static com.smartsparrow.rtm.message.handler.plugin.GetPublishedPluginMessageHandler.AUTHOR_PLUGIN_GET;
+import static com.smartsparrow.rtm.message.handler.plugin.GrantPluginPermissionMessageHandler.WORKSPACE_PLUGIN_GRANT_PERMISSION;
+import static com.smartsparrow.rtm.message.handler.plugin.ListPluginMessageHandler.WORKSPACE_PLUGIN_LIST;
+import static com.smartsparrow.rtm.message.handler.plugin.PluginAccountListMessageHandler.WORKSPACE_PLUGIN_ACCOUNT_LIST;
+import static com.smartsparrow.rtm.message.handler.plugin.PluginAccountSummaryMessageHandler.WORKSPACE_PLUGIN_ACCOUNT_SUMMARY;
+import static com.smartsparrow.rtm.message.handler.plugin.PluginCollaboratorSummaryMessageHandler.WORKSPACE_PLUGIN_COLLABORATOR_SUMMARY;
+import static com.smartsparrow.rtm.message.handler.plugin.PluginSubscribeMessageHandler.WORKSPACE_PLUGIN_PERMISSION_SUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.plugin.RevokePluginPermissionMessageHandler.WORKSPACE_PLUGIN_PERMISSION_REVOKE;
+import static com.smartsparrow.rtm.message.handler.plugin.SyncPluginMessageHandler.WORKSPACE_PLUGIN_SYNC;
+import static com.smartsparrow.rtm.message.handler.plugin.UnpublishPluginVersionMessageHandler.AUTHOR_PLUGIN_VERSION_UNPUBLISH;
+import static com.smartsparrow.rtm.message.handler.plugin.UpdatePluginMessageHandler.WORKSPACE_PLUGIN_UPDATE;
+import static com.smartsparrow.rtm.message.handler.plugin.WorkspacePluginLogMessageHandler.WORKSPACE_PLUGIN_LOG;
+import static com.smartsparrow.rtm.message.handler.team.CreateTeamMessageHandler.IAM_TEAM_CREATE;
+import static com.smartsparrow.rtm.message.handler.team.DeleteTeamMessageHandler.IAM_TEAM_DELETE;
+import static com.smartsparrow.rtm.message.handler.team.GrantTeamPermissionMessageHandler.IAM_TEAM_PERMISSION_GRANT;
+import static com.smartsparrow.rtm.message.handler.team.ListSubscriptionTeamsMessageHandler.IAM_TEAM_SUBSCRIPTION_LIST;
+import static com.smartsparrow.rtm.message.handler.team.ListTeamMessageHandler.IAM_TEAM_LIST;
+import static com.smartsparrow.rtm.message.handler.team.RevokeTeamPermissionMessageHandler.IAM_TEAM_PERMISSION_REVOKE;
+import static com.smartsparrow.rtm.message.handler.team.TeamAccountSummaryMessageHandler.IAM_TEAM_ACCOUNT_SUMMARY;
+import static com.smartsparrow.rtm.message.handler.team.UpdateTeamMessageHandler.IAM_TEAM_UPDATE;
+import static com.smartsparrow.rtm.message.handler.user_content.UserFavoriteCreateMessageHandler.USER_CONTENT_FAVORITE_CREATE;
+import static com.smartsparrow.rtm.message.handler.user_content.UserFavoriteGetMessageHandler.USER_CONTENT_FAVORITE_GET;
+import static com.smartsparrow.rtm.message.handler.user_content.UserRecentlyViewedCreateMessageHandler.USER_CONTENT_RECENTLY_VIEWED_CREATE;
+import static com.smartsparrow.rtm.message.handler.user_content.UserSharedResourceCreateMessageHandler.USER_CONTENT_SHARED_RESOURCE_CREATE;
+import static com.smartsparrow.rtm.message.handler.workspace.ChangeWorkspaceMessageHandler.WORKSPACE_CHANGE;
+import static com.smartsparrow.rtm.message.handler.workspace.CreateProjectActivityMessageHandler.PROJECT_ACTIVITY_CREATE;
+import static com.smartsparrow.rtm.message.handler.workspace.CreateWorkspaceMessageHandler.WORKSPACE_CREATE;
+import static com.smartsparrow.rtm.message.handler.workspace.CreateWorkspaceProjectMessageHandler.WORKSPACE_PROJECT_CREATE;
+import static com.smartsparrow.rtm.message.handler.workspace.DeleteProjectActivityMessageHandler.PROJECT_ACTIVITY_DELETE;
+import static com.smartsparrow.rtm.message.handler.workspace.DeleteWorkspaceMessageHandler.WORKSPACE_DELETE;
+import static com.smartsparrow.rtm.message.handler.workspace.GetProjectMessageHandler.WORKSPACE_PROJECT_GET;
+import static com.smartsparrow.rtm.message.handler.workspace.GrantProjectPermissionMessageHandler.WORKSPACE_PROJECT_PERMISSION_GRANT;
+import static com.smartsparrow.rtm.message.handler.workspace.GrantWorkspacePermissionMessageHandler.WORKSPACE_PERMISSION_GRANT;
+import static com.smartsparrow.rtm.message.handler.workspace.ListProjectActivityMessageHandler.PROJECT_ACTIVITY_LIST;
+import static com.smartsparrow.rtm.message.handler.workspace.ListProjectCollaboratorMessageHandler.WORKSPACE_PROJECT_COLLABORATOR_SUMMARY;
+import static com.smartsparrow.rtm.message.handler.workspace.ListWorkspaceCollaboratorMessageHandler.WORKSPACE_COLLABORATOR_SUMMARY;
+import static com.smartsparrow.rtm.message.handler.workspace.ListWorkspaceMessageHandler.WORKSPACE_LIST;
+import static com.smartsparrow.rtm.message.handler.workspace.ListWorkspaceProjectMessageHandler.WORKSPACE_PROJECT_LIST;
+import static com.smartsparrow.rtm.message.handler.workspace.ProjectChangeLogSubscribeMessageHandler.PROJECT_CHANGELOG_SUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.workspace.ProjectChangeLogUnsubscribeMessageHandler.PROJECT_CHANGELOG_UNSUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.workspace.ProjectSubscribeMessageHandler.WORKSPACE_PROJECT_SUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.workspace.ProjectUnsubscribeMessageHandler.WORKSPACE_PROJECT_UNSUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.workspace.RevokeProjectPermissionMessageHandler.WORKSPACE_PROJECT_PERMISSION_REVOKE;
+import static com.smartsparrow.rtm.message.handler.workspace.RevokeWorkspacePermissionMessageHandler.WORKSPACE_PERMISSION_REVOKE;
+import static com.smartsparrow.rtm.message.handler.workspace.WorkspaceProjectDeleteMessageHandler.WORKSPACE_PROJECT_DELETE;
+import static com.smartsparrow.rtm.message.handler.workspace.WorkspaceProjectMoveMessageHandler.WORKSPACE_PROJECT_MOVE;
+import static com.smartsparrow.rtm.message.handler.workspace.WorkspaceProjectReplaceMessageHandler.WORKSPACE_PROJECT_REPLACE;
+import static com.smartsparrow.rtm.message.handler.workspace.WorkspaceSubscribeMessageHandler.WORKSPACE_SUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.workspace.WorkspaceUnsubscribeMessageHandler.WORKSPACE_UNSUBSCRIBE;
+import static com.smartsparrow.rtm.message.handler.user_content.UserSharedResourceCreateMessageHandler.USER_CONTENT_SHARED_RESOURCE_CREATE;
+import static com.smartsparrow.rtm.message.handler.user_content.UserFavoriteCreateMessageHandler.USER_CONTENT_FAVORITE_CREATE;
+import static com.smartsparrow.rtm.message.handler.user_content.UserFavoriteRemoveMessageHandler.USER_CONTENT_FAVORITE_REMOVE;
+import static com.smartsparrow.rtm.message.handler.user_content.UserRecentlyViewedCreateMessageHandler.USER_CONTENT_RECENTLY_VIEWED_CREATE;
+import static com.smartsparrow.rtm.message.handler.user_content.UserFavoriteGetMessageHandler.USER_CONTENT_FAVORITE_GET;
+
+import com.smartsparrow.rtm.message.authorization.AllowAccountSubscriptionContributorOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowAdmin;
+import com.smartsparrow.rtm.message.authorization.AllowAuthenticated;
+import com.smartsparrow.rtm.message.authorization.AllowCohortContributorOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowCohortOwner;
+import com.smartsparrow.rtm.message.authorization.AllowCohortReviewerOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowCoursewareAnnotationAuthorizer;
+import com.smartsparrow.rtm.message.authorization.AllowCoursewareElementContributorOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowCoursewareElementExportAuthorizer;
+import com.smartsparrow.rtm.message.authorization.AllowCoursewareElementReviewerOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowCoursewareRootElementExportAuthorizer;
+import com.smartsparrow.rtm.message.authorization.AllowDeleteCoursewareAnnotationAuthorizer;
+import com.smartsparrow.rtm.message.authorization.AllowDocumentContributorOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowDocumentReviewerOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowEditEqualOrLowerRoles;
+import com.smartsparrow.rtm.message.authorization.AllowEqualOrHigherPluginPermissionLevel;
+import com.smartsparrow.rtm.message.authorization.AllowEqualOrHigherTeamPermissionLevel;
+import com.smartsparrow.rtm.message.authorization.AllowFavoriteContributorOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowFavoriteViewedProjectOwner;
+import com.smartsparrow.rtm.message.authorization.AllowGrantEqualOrHigherCohortPermissionLevel;
+import com.smartsparrow.rtm.message.authorization.AllowGrantEqualOrHigherDocumentPermissionLevel;
+import com.smartsparrow.rtm.message.authorization.AllowGrantEqualOrHigherProjectPermissionLevel;
+import com.smartsparrow.rtm.message.authorization.AllowGrantEqualOrHigherSubscriptionPermission;
+import com.smartsparrow.rtm.message.authorization.AllowGrantEqualOrHigherThemePermissionLevel;
+import com.smartsparrow.rtm.message.authorization.AllowGrantEqualOrHigherWorkspacePermissionLevel;
+import com.smartsparrow.rtm.message.authorization.AllowListCoursewareAnnotationAuthorizer;
+import com.smartsparrow.rtm.message.authorization.AllowPathwayContributorOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowPluginContributorOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowPluginOwner;
+import com.smartsparrow.rtm.message.authorization.AllowPluginReviewerOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowPluginSync;
+import com.smartsparrow.rtm.message.authorization.AllowProjectContributorOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowProjectIngestionContributorOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowProjectIngestionOwner;
+import com.smartsparrow.rtm.message.authorization.AllowProjectIngestionReviewerOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowProjectOwner;
+import com.smartsparrow.rtm.message.authorization.AllowProjectReviewerOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowProjectRootElementIngestionReviewerOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowRecentlyViewedContributorOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowRecentlyViewedProjectOwner;
+import com.smartsparrow.rtm.message.authorization.AllowResolveCoursewareAnnotationAuthorizer;
+import com.smartsparrow.rtm.message.authorization.AllowRevokeEqualOrHigherCohortPermissionLevel;
+import com.smartsparrow.rtm.message.authorization.AllowRevokeEqualOrHigherDocumentPermissionLevel;
+import com.smartsparrow.rtm.message.authorization.AllowRevokeEqualOrHigherProjectPermissionLevel;
+import com.smartsparrow.rtm.message.authorization.AllowRevokeEqualOrHigherThemePermissionLevel;
+import com.smartsparrow.rtm.message.authorization.AllowRevokeEqualOrHigherWorkspacePermissionLevel;
+import com.smartsparrow.rtm.message.authorization.AllowSelfSubscriptionContributorOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowSelfSubscriptionReviewerOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowSharedResourceContributorOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowSharedResourceProjectOwner;
+import com.smartsparrow.rtm.message.authorization.AllowSubscriptionContributorOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowSubscriptionOwnerOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowSubscriptionReviewerOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowSupport;
+import com.smartsparrow.rtm.message.authorization.AllowTeamContributorOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowTeamOwnerOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowThemeContributorOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowThemeOwnerOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowThemeReviewerOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowUpdateCoursewareAnnotationAuthorizer;
+import com.smartsparrow.rtm.message.authorization.AllowWorkspaceContributorOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowWorkspaceOwnerOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowWorkspaceReviewerOrHigher;
+import com.smartsparrow.rtm.message.authorization.AllowWorkspaceRoles;
+import com.smartsparrow.rtm.message.authorization.Everyone;
+import com.smartsparrow.rtm.message.event.courseware.ActivityChangeEventPublisher;
+import com.smartsparrow.rtm.message.event.courseware.ContentSeedingEventPublisher;
+import com.smartsparrow.rtm.message.event.courseware.CoursewareChangeLogEventPublisher;
+import com.smartsparrow.rtm.message.event.courseware.DeleteCoursewareAnnotationsEventPublisher;
+import com.smartsparrow.rtm.message.event.courseware.MoveCoursewareAnnotationsEventPublisher;
+import com.smartsparrow.rtm.message.event.courseware.UpdateProductLearnerRedirectEventPublisher;
+import com.smartsparrow.rtm.message.event.workspace.ProjectEventPublisher;
+import com.smartsparrow.rtm.message.handler.AssumeTokenMessageHandler;
+import com.smartsparrow.rtm.message.handler.CreateLTICredentialPluginMessageHandler;
+import com.smartsparrow.rtm.message.handler.CreateOIDCProviderMessageHandler;
+import com.smartsparrow.rtm.message.handler.DelayedMessageHandler;
+import com.smartsparrow.rtm.message.handler.DeleteLTICredentialPluginMessageHandler;
+import com.smartsparrow.rtm.message.handler.DeveloperKeyProvisionMessageHandler;
+import com.smartsparrow.rtm.message.handler.GetAssetMessageHandler;
+import com.smartsparrow.rtm.message.handler.GraphQLQueryMessageHandler;
+import com.smartsparrow.rtm.message.handler.LTIConsumerKeyCreateMessageHandler;
+import com.smartsparrow.rtm.message.handler.SetAvatarMessageHandler;
+import com.smartsparrow.rtm.message.handler.TimeMessageHandler;
+import com.smartsparrow.rtm.message.handler.TimeSubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.TimeUnsubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.asset.AlfrescoAssetsProgressMessageHandler;
+import com.smartsparrow.rtm.message.handler.asset.AlfrescoAssetsPullMessageHandler;
+import com.smartsparrow.rtm.message.handler.asset.AlfrescoAssetsPushCountMessageHandler;
+import com.smartsparrow.rtm.message.handler.asset.AlfrescoAssetsPushMessageHandler;
+import com.smartsparrow.rtm.message.handler.asset.CreateAssetMessageHandler;
+import com.smartsparrow.rtm.message.handler.asset.CreateAssetSignatureConfigMessageHandler;
+import com.smartsparrow.rtm.message.handler.asset.DeleteAssetSignatureConfigMessageHandler;
+import com.smartsparrow.rtm.message.handler.asset.DeleteIconAssetsMessageHandler;
+import com.smartsparrow.rtm.message.handler.asset.ListAssetMessageHandler;
+import com.smartsparrow.rtm.message.handler.asset.ListIconAssetMessageHandler;
+import com.smartsparrow.rtm.message.handler.asset.SelectAlfrescoAssetMessageHandler;
+import com.smartsparrow.rtm.message.handler.asset.UpdateAssetMetadataMessageHandler;
+import com.smartsparrow.rtm.message.handler.cohort.ArchiveCohortMessageHandler;
+import com.smartsparrow.rtm.message.handler.cohort.ChangeCohortMessageHandler;
+import com.smartsparrow.rtm.message.handler.cohort.CohortAccountSummaryMessageHandler;
+import com.smartsparrow.rtm.message.handler.cohort.CohortDisenrollAccountMessageHandler;
+import com.smartsparrow.rtm.message.handler.cohort.CohortEnrollAccountMessageHandler;
+import com.smartsparrow.rtm.message.handler.cohort.CohortEnrollmentListMessageHandler;
+import com.smartsparrow.rtm.message.handler.cohort.CohortListMessageHandler;
+import com.smartsparrow.rtm.message.handler.cohort.CohortSubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.cohort.CohortUnsubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.cohort.CreateCohortMessageHandler;
+import com.smartsparrow.rtm.message.handler.cohort.GetCohortMessageHandler;
+import com.smartsparrow.rtm.message.handler.cohort.GrantCohortPermissionMessageHandler;
+import com.smartsparrow.rtm.message.handler.cohort.ListDeploymentMessageHandler;
+import com.smartsparrow.rtm.message.handler.cohort.RevokeCohortPermissionMessageHandler;
+import com.smartsparrow.rtm.message.handler.cohort.UnarchiveCohortMessageHandler;
+import com.smartsparrow.rtm.message.handler.competency.CompetencyDocumentSubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.competency.CompetencyDocumentUnsubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.competency.GrantDocumentPermissionMessageHandler;
+import com.smartsparrow.rtm.message.handler.competency.ListCompetencyDocumentCollaboratorMessageHandler;
+import com.smartsparrow.rtm.message.handler.competency.RevokeDocumentPermissionMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.AddAssetMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.CoursewareBreadcrumbMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.CoursewareElementDescriptionMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.CoursewareEvaluableMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.FindCoursewareProjectSummaryMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.GetCoursewareElementMetaInformationMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.GetCoursewareEvaluableMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.GetCoursewareStructureMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.GetCoursewareStructureNavigateMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.GetCoursewareSupportStructureMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.ListAccountSummaryMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.RemoveAssetMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.RemoveAssetsMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.SetCoursewareElementMetaInformationMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.activity.ActivityChangeLogSubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.activity.ActivityChangeLogUnsubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.activity.ActivitySubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.activity.ActivityUnsubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.activity.CreateActivityMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.activity.DeleteActivityMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.activity.DuplicateActivityMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.activity.DuplicateActivityProjectMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.activity.GetActivityMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.activity.MoveActivityMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.activity.PublishProjectActivityMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.activity.ReplaceActivityConfigMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.activity.ReplaceActivityThemeMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.annotation.AggregateCoursewareAnnotationMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.annotation.CreateCoursewareAnnotationMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.annotation.DeleteCoursewareAnnotationMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.annotation.GetCoursewareAnnotationMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.annotation.ListCoursewareAnnotationMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.annotation.ReadCoursewareAnnotationMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.annotation.ResolveCoursewareAnnotationMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.annotation.UpdateCoursewareAnnotationMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.changelog.ListElementChangeLogMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.changelog.ListProjectChangeLogMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.component.CreateActivityComponentMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.component.CreateInteractiveComponentMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.component.DeleteActivityComponentMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.component.DeleteInteractiveComponentMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.component.DeleteInteractiveComponentsMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.component.DeleteManualGradingConfigurationMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.component.GetComponentMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.component.GetManualGradingConfigurationMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.component.MoveComponentsMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.component.ReplaceComponentConfigMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.component.RestoreInteractiveComponentMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.component.SetManualGradeConfigurationMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.export.ActivityExportRequestMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.export.ActivityExportSubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.export.ActivityExportUnsubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.export.ElementExportRequestMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.export.ExportErrorMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.export.ProjectExportListMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.export.WorkspaceExportListMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.feedback.CreateInteractiveFeedbackMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.feedback.DeleteInteractiveFeedbackMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.feedback.GetInteractiveFeedbackMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.feedback.ReplaceInteractiveFeedbackConfigMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.feedback.ReplacePathwayConfigMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.interactive.CreateInteractiveMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.interactive.DeleteInteractiveMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.interactive.DuplicateInteractiveMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.interactive.GetInteractiveMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.interactive.InteractiveScenariosTestMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.interactive.MoveInteractiveMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.interactive.ReplaceInteractiveConfigMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.pathway.CreatePathwayMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.pathway.DeletePathwayMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.pathway.GetPathwayMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.pathway.ReorderWalkableMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.publication.CreatePublicationRequestMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.publication.ListPublicationRequestMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.publication.PublicationActivityFetchMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.publication.PublicationHistoryDeleteMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.publication.PublicationHistoryFetchMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.publication.PublicationJobSubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.publication.PublicationJobUnsubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.publication.PublicationOculusStatusMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.publication.PublishClassOnDemandMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.publication.PublishPearsonPlusMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.publication.UpdatePublicationTitleRequestMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.scenario.CreateScenarioMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.scenario.ListScenarioMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.scenario.ReorderScenariosMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.scenario.ReplaceScenarioMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.scope.DeRegisterFromStudentScopeMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.scope.ListSourcesRegisteredToScopeMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.scope.RegisterToStudentScopeMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.theme.AssociateActivityThemeIconLibraryMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.theme.AssociateThemeIconLibraryMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.theme.AuthorGetThemeVariantMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.theme.CreateCoursewareThemeMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.theme.CreateElementThemeMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.theme.CreateThemeVariantMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.theme.DeleteCoursewareThemeMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.theme.DeleteElementThemeMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.theme.DeleteThemeVariantMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.theme.GrantThemePermissionMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.theme.ListCoursewareThemeMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.theme.ListThemeCollaboratorMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.theme.RevokeThemePermissionMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.theme.UpdateCoursewareThemeMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.theme.UpdateThemeVariantMessageHandler;
+import com.smartsparrow.rtm.message.handler.courseware.theme.WorkspaceGetThemeVariantMessageHandler;
+import com.smartsparrow.rtm.message.handler.diffsync.DiffSyncAckMessageHandler;
+import com.smartsparrow.rtm.message.handler.diffsync.DiffSyncEndMessageHandler;
+import com.smartsparrow.rtm.message.handler.diffsync.DiffSyncPatchMessageHandler;
+import com.smartsparrow.rtm.message.handler.diffsync.DiffSyncStartMessageHandler;
+import com.smartsparrow.rtm.message.handler.iam.AccountProvisionMessageHandler;
+import com.smartsparrow.rtm.message.handler.iam.AccountProvisionSubscribeHandler;
+import com.smartsparrow.rtm.message.handler.iam.AccountSubscriptionMigrateMessageHandler;
+import com.smartsparrow.rtm.message.handler.iam.AddRoleMessageHandler;
+import com.smartsparrow.rtm.message.handler.iam.AddShadowAttributeMessageHandler;
+import com.smartsparrow.rtm.message.handler.iam.GrantSubscriptionPermissionMessageHandler;
+import com.smartsparrow.rtm.message.handler.iam.ListCredentialMessageHandler;
+import com.smartsparrow.rtm.message.handler.iam.ListUserMessageHandler;
+import com.smartsparrow.rtm.message.handler.iam.MyCloudAuthorizeMessageHandler;
+import com.smartsparrow.rtm.message.handler.iam.RemoveRoleMessageHandler;
+import com.smartsparrow.rtm.message.handler.iam.RemoveShadowAttributeMessageHandler;
+import com.smartsparrow.rtm.message.handler.iam.SetAccountPasswordMessageHandler;
+import com.smartsparrow.rtm.message.handler.iam.SetPasswordMessageHandler;
+import com.smartsparrow.rtm.message.handler.iam.SubscriptionAccountProvisionMessageHandler;
+import com.smartsparrow.rtm.message.handler.iam.SubscriptionCollaboratorSummaryMessageHandler;
+import com.smartsparrow.rtm.message.handler.ingestion.IngestionSubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.ingestion.IngestionUnsubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.ingestion.ProjectIngestionCreateMessageHandler;
+import com.smartsparrow.rtm.message.handler.ingestion.ProjectIngestionDeleteMessageHandler;
+import com.smartsparrow.rtm.message.handler.ingestion.ProjectIngestionGetMessageHandler;
+import com.smartsparrow.rtm.message.handler.ingestion.ProjectIngestionListMessageHandler;
+import com.smartsparrow.rtm.message.handler.ingestion.ProjectIngestionLogListMessageHandler;
+import com.smartsparrow.rtm.message.handler.ingestion.ProjectIngestionRequestMessageHandler;
+import com.smartsparrow.rtm.message.handler.ingestion.ProjectIngestionRootGetMessageHandler;
+import com.smartsparrow.rtm.message.handler.ingestion.ProjectIngestionStartMessageHandler;
+import com.smartsparrow.rtm.message.handler.ingestion.ProjectIngestionUpdateMessageHandler;
+import com.smartsparrow.rtm.message.handler.math.MathAssetCreateMessageHandler;
+import com.smartsparrow.rtm.message.handler.math.MathAssetGetMessageHandler;
+import com.smartsparrow.rtm.message.handler.math.RemoveMathAssetMessageHandler;
+import com.smartsparrow.rtm.message.handler.plugin.CreatePluginMessageHandler;
+import com.smartsparrow.rtm.message.handler.plugin.DeletePluginMessageHandler;
+import com.smartsparrow.rtm.message.handler.plugin.DeletePluginVersionMessageHandler;
+import com.smartsparrow.rtm.message.handler.plugin.GetPluginInfoMessageHandler;
+import com.smartsparrow.rtm.message.handler.plugin.GetPluginVersionsMessageHandler;
+import com.smartsparrow.rtm.message.handler.plugin.GetPluginsListMessageHandler;
+import com.smartsparrow.rtm.message.handler.plugin.GetPublishedPluginMessageHandler;
+import com.smartsparrow.rtm.message.handler.plugin.GrantPluginPermissionMessageHandler;
+import com.smartsparrow.rtm.message.handler.plugin.ListPluginMessageHandler;
+import com.smartsparrow.rtm.message.handler.plugin.PluginAccountListMessageHandler;
+import com.smartsparrow.rtm.message.handler.plugin.PluginAccountSummaryMessageHandler;
+import com.smartsparrow.rtm.message.handler.plugin.PluginCollaboratorSummaryMessageHandler;
+import com.smartsparrow.rtm.message.handler.plugin.PluginSubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.plugin.RevokePluginPermissionMessageHandler;
+import com.smartsparrow.rtm.message.handler.plugin.SyncPluginMessageHandler;
+import com.smartsparrow.rtm.message.handler.plugin.UnpublishPluginVersionMessageHandler;
+import com.smartsparrow.rtm.message.handler.plugin.UpdatePluginMessageHandler;
+import com.smartsparrow.rtm.message.handler.plugin.WorkspacePluginLogMessageHandler;
+import com.smartsparrow.rtm.message.handler.team.CreateTeamMessageHandler;
+import com.smartsparrow.rtm.message.handler.team.DeleteTeamMessageHandler;
+import com.smartsparrow.rtm.message.handler.team.GrantTeamPermissionMessageHandler;
+import com.smartsparrow.rtm.message.handler.team.ListSubscriptionTeamsMessageHandler;
+import com.smartsparrow.rtm.message.handler.team.ListTeamMessageHandler;
+import com.smartsparrow.rtm.message.handler.team.RevokeTeamPermissionMessageHandler;
+import com.smartsparrow.rtm.message.handler.team.TeamAccountSummaryMessageHandler;
+import com.smartsparrow.rtm.message.handler.team.UpdateTeamMessageHandler;
+import com.smartsparrow.rtm.message.handler.user_content.UserFavoriteCreateMessageHandler;
+import com.smartsparrow.rtm.message.handler.user_content.UserFavoriteGetMessageHandler;
+import com.smartsparrow.rtm.message.handler.user_content.UserFavoriteRemoveMessageHandler;
+import com.smartsparrow.rtm.message.handler.user_content.UserSharedResourceCreateMessageHandler;
+import com.smartsparrow.rtm.message.handler.user_content.UserRecentlyViewedCreateMessageHandler;
+import com.smartsparrow.rtm.message.handler.user_content.UserSharedResourceCreateMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.ChangeWorkspaceMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.CreateProjectActivityMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.CreateWorkspaceMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.CreateWorkspaceProjectMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.DeleteProjectActivityMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.DeleteWorkspaceMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.GetProjectMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.GrantProjectPermissionMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.GrantWorkspacePermissionMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.ListProjectActivityMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.ListProjectCollaboratorMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.ListWorkspaceCollaboratorMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.ListWorkspaceMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.ListWorkspaceProjectMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.ProjectChangeLogSubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.ProjectChangeLogUnsubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.ProjectSubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.ProjectUnsubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.RevokeProjectPermissionMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.RevokeWorkspacePermissionMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.WorkspaceProjectDeleteMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.WorkspaceProjectMoveMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.WorkspaceProjectReplaceMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.WorkspaceSubscribeMessageHandler;
+import com.smartsparrow.rtm.message.handler.workspace.WorkspaceUnsubscribeMessageHandler;
+import com.smartsparrow.rtm.message.recv.CreateOIDCProviderMessage;
+import com.smartsparrow.rtm.message.recv.DelayedMessage;
+import com.smartsparrow.rtm.message.recv.EmptyReceivedMessage;
+import com.smartsparrow.rtm.message.recv.GetAssetMessage;
+import com.smartsparrow.rtm.message.recv.GraphQLQueryMessage;
+import com.smartsparrow.rtm.message.recv.ListMessage;
+import com.smartsparrow.rtm.message.recv.SetAvatarMessage;
+import com.smartsparrow.rtm.message.recv.TimeMessage;
+import com.smartsparrow.rtm.message.recv.asset.AlfrescoAssetsProgressMessage;
+import com.smartsparrow.rtm.message.recv.asset.AlfrescoAssetsPullMessage;
+import com.smartsparrow.rtm.message.recv.asset.AlfrescoAssetsPushMessage;
+import com.smartsparrow.rtm.message.recv.asset.CreateAssetMessage;
+import com.smartsparrow.rtm.message.recv.asset.CreateAssetSignatureConfigMessage;
+import com.smartsparrow.rtm.message.recv.asset.DeleteAssetSignatureConfigMessage;
+import com.smartsparrow.rtm.message.recv.asset.DeleteIconAssetMessage;
+import com.smartsparrow.rtm.message.recv.asset.ListAssetMessage;
+import com.smartsparrow.rtm.message.recv.asset.ListIconAssetMessage;
+import com.smartsparrow.rtm.message.recv.asset.SelectAlfrescoAssetMessage;
+import com.smartsparrow.rtm.message.recv.asset.UpdateAssetMetadataMessage;
+import com.smartsparrow.rtm.message.recv.cohort.ChangeCohortMessage;
+import com.smartsparrow.rtm.message.recv.cohort.CohortCollaboratorSummaryMessage;
+import com.smartsparrow.rtm.message.recv.cohort.CohortEnrollmentMessage;
+import com.smartsparrow.rtm.message.recv.cohort.CohortGenericMessage;
+import com.smartsparrow.rtm.message.recv.cohort.CohortListMessage;
+import com.smartsparrow.rtm.message.recv.cohort.CreateCohortMessage;
+import com.smartsparrow.rtm.message.recv.cohort.GrantCohortPermissionMessage;
+import com.smartsparrow.rtm.message.recv.cohort.ListDeploymentMessage;
+import com.smartsparrow.rtm.message.recv.cohort.RevokeCohortPermissionMessage;
+import com.smartsparrow.rtm.message.recv.competency.CompetencyDocumentMessage;
+import com.smartsparrow.rtm.message.recv.competency.GrantDocumentPermissionMessage;
+import com.smartsparrow.rtm.message.recv.competency.ListCompetencyDocumentCollaboratorMessage;
+import com.smartsparrow.rtm.message.recv.competency.RevokeDocumentPermissionMessage;
+import com.smartsparrow.rtm.message.recv.courseware.AddAssetMessage;
+import com.smartsparrow.rtm.message.recv.courseware.CoursewareBreadcrumbMessage;
+import com.smartsparrow.rtm.message.recv.courseware.CoursewareElementDescriptionMessage;
+import com.smartsparrow.rtm.message.recv.courseware.CoursewareEvaluableMessage;
+import com.smartsparrow.rtm.message.recv.courseware.FindCoursewareProjectMessage;
+import com.smartsparrow.rtm.message.recv.courseware.GetCoursewareElementMetaInformationMessage;
+import com.smartsparrow.rtm.message.recv.courseware.GetCoursewareElementStructureMessage;
+import com.smartsparrow.rtm.message.recv.courseware.GetCoursewareElementStructureNavigateMessage;
+import com.smartsparrow.rtm.message.recv.courseware.GetCoursewareEvaluableMessage;
+import com.smartsparrow.rtm.message.recv.courseware.ListAccountSummaryMessage;
+import com.smartsparrow.rtm.message.recv.courseware.RemoveAssetMessage;
+import com.smartsparrow.rtm.message.recv.courseware.RemoveAssetsMessage;
+import com.smartsparrow.rtm.message.recv.courseware.SetCoursewareElementMetaInformationMessage;
+import com.smartsparrow.rtm.message.recv.courseware.activity.ActivityGenericMessage;
+import com.smartsparrow.rtm.message.recv.courseware.activity.CreateActivityMessage;
+import com.smartsparrow.rtm.message.recv.courseware.activity.DeleteActivityMessage;
+import com.smartsparrow.rtm.message.recv.courseware.activity.DuplicateActivityMessage;
+import com.smartsparrow.rtm.message.recv.courseware.activity.DuplicateActivityProjectMessage;
+import com.smartsparrow.rtm.message.recv.courseware.activity.MoveActivityMessage;
+import com.smartsparrow.rtm.message.recv.courseware.activity.PublishActivityMessage;
+import com.smartsparrow.rtm.message.recv.courseware.activity.ReplaceActivityConfigMessage;
+import com.smartsparrow.rtm.message.recv.courseware.activity.ReplaceActivityThemeMessage;
+import com.smartsparrow.rtm.message.recv.courseware.activity.WorkspaceGenericMessage;
+import com.smartsparrow.rtm.message.recv.courseware.annotation.CreateCoursewareAnnotationMessage;
+import com.smartsparrow.rtm.message.recv.courseware.annotation.DeleteCoursewareAnnotationMessage;
+import com.smartsparrow.rtm.message.recv.courseware.annotation.GetCoursewareAnnotationMessage;
+import com.smartsparrow.rtm.message.recv.courseware.annotation.ListCoursewareAnnotationMessage;
+import com.smartsparrow.rtm.message.recv.courseware.annotation.ReadCoursewareAnnotationMessage;
+import com.smartsparrow.rtm.message.recv.courseware.annotation.ResolveCoursewareAnnotationMessage;
+import com.smartsparrow.rtm.message.recv.courseware.annotation.UpdateCoursewareAnnotationMessage;
+import com.smartsparrow.rtm.message.recv.courseware.component.ComponentMessage;
+import com.smartsparrow.rtm.message.recv.courseware.component.CreateActivityComponentMessage;
+import com.smartsparrow.rtm.message.recv.courseware.component.CreateInteractiveComponentMessage;
+import com.smartsparrow.rtm.message.recv.courseware.component.DeleteActivityComponentMessage;
+import com.smartsparrow.rtm.message.recv.courseware.component.DeleteInteractiveComponentMessage;
+import com.smartsparrow.rtm.message.recv.courseware.component.DeleteInteractiveComponentsMessage;
+import com.smartsparrow.rtm.message.recv.courseware.component.ManualGradingConfigurationSetMessage;
+import com.smartsparrow.rtm.message.recv.courseware.component.MoveComponentsMessage;
+import com.smartsparrow.rtm.message.recv.courseware.component.ReplaceComponentConfigMessage;
+import com.smartsparrow.rtm.message.recv.courseware.component.RestoreInteractiveComponentMessage;
+import com.smartsparrow.rtm.message.recv.courseware.export.CreateCoursewareElementExportMessage;
+import com.smartsparrow.rtm.message.recv.courseware.export.CreateCoursewareRootElementExportMessage;
+import com.smartsparrow.rtm.message.recv.courseware.export.ExportGenericMessage;
+import com.smartsparrow.rtm.message.recv.courseware.feedback.CreateInteractiveFeedbackMessage;
+import com.smartsparrow.rtm.message.recv.courseware.feedback.DeleteInteractiveFeedbackMessage;
+import com.smartsparrow.rtm.message.recv.courseware.feedback.GetInteractiveFeedbackMessage;
+import com.smartsparrow.rtm.message.recv.courseware.feedback.ReplaceInteractiveFeedbackConfigMessage;
+import com.smartsparrow.rtm.message.recv.courseware.interactive.CreateInteractiveMessage;
+import com.smartsparrow.rtm.message.recv.courseware.interactive.DeleteInteractiveMessage;
+import com.smartsparrow.rtm.message.recv.courseware.interactive.DuplicateInteractiveMessage;
+import com.smartsparrow.rtm.message.recv.courseware.interactive.GetInteractiveMessage;
+import com.smartsparrow.rtm.message.recv.courseware.interactive.InteractiveScenariosTestMessage;
+import com.smartsparrow.rtm.message.recv.courseware.interactive.MoveInteractiveMessage;
+import com.smartsparrow.rtm.message.recv.courseware.interactive.ReplaceInteractiveConfigMessage;
+import com.smartsparrow.rtm.message.recv.courseware.pathway.CreatePathwayMessage;
+import com.smartsparrow.rtm.message.recv.courseware.pathway.DeletePathwayMessage;
+import com.smartsparrow.rtm.message.recv.courseware.pathway.GetPathwayMessage;
+import com.smartsparrow.rtm.message.recv.courseware.pathway.ReorderWalkableMessage;
+import com.smartsparrow.rtm.message.recv.courseware.pathway.ReplacePathwayConfigMessage;
+import com.smartsparrow.rtm.message.recv.courseware.publication.CreatePublicationMessage;
+import com.smartsparrow.rtm.message.recv.courseware.publication.PublicationActivityFetchMessage;
+import com.smartsparrow.rtm.message.recv.courseware.publication.PublicationHistoryDeleteMessage;
+import com.smartsparrow.rtm.message.recv.courseware.publication.PublicationHistoryFetchMessage;
+import com.smartsparrow.rtm.message.recv.courseware.publication.PublicationJobGenericMessage;
+import com.smartsparrow.rtm.message.recv.courseware.publication.PublicationListMessage;
+import com.smartsparrow.rtm.message.recv.courseware.publication.PublicationOculusStatusMessage;
+import com.smartsparrow.rtm.message.recv.courseware.publication.PublishClassOnDemandMessage;
+import com.smartsparrow.rtm.message.recv.courseware.publication.PublishPearsonPlusMessage;
+import com.smartsparrow.rtm.message.recv.courseware.publication.UpdatePublicationTitleMessage;
+import com.smartsparrow.rtm.message.recv.courseware.scenario.CreateScenarioMessage;
+import com.smartsparrow.rtm.message.recv.courseware.scenario.ListScenarioMessage;
+import com.smartsparrow.rtm.message.recv.courseware.scenario.ReorderScenariosMessage;
+import com.smartsparrow.rtm.message.recv.courseware.scenario.ReplaceScenarioMessage;
+import com.smartsparrow.rtm.message.recv.courseware.scope.ListSourcesRegisteredToScopeMessage;
+import com.smartsparrow.rtm.message.recv.courseware.scope.StudentScopeMessage;
+import com.smartsparrow.rtm.message.recv.courseware.theme.AssociateActivityIconLibraryMessage;
+import com.smartsparrow.rtm.message.recv.courseware.theme.AssociateThemeIconLibraryMessage;
+import com.smartsparrow.rtm.message.recv.courseware.theme.CreateCoursewareThemeMessage;
+import com.smartsparrow.rtm.message.recv.courseware.theme.CreateElementThemeMessage;
+import com.smartsparrow.rtm.message.recv.courseware.theme.CreateThemeVariantMessage;
+import com.smartsparrow.rtm.message.recv.courseware.theme.DeleteElementThemeMessage;
+import com.smartsparrow.rtm.message.recv.courseware.theme.DeleteThemeVariantMessage;
+import com.smartsparrow.rtm.message.recv.courseware.theme.GenericThemeMessage;
+import com.smartsparrow.rtm.message.recv.courseware.theme.GetThemeVariantMessage;
+import com.smartsparrow.rtm.message.recv.courseware.theme.GrantThemePermissionMessage;
+import com.smartsparrow.rtm.message.recv.courseware.theme.ListThemeCollaboratorMessage;
+import com.smartsparrow.rtm.message.recv.courseware.theme.RevokeThemePermissionMessage;
+import com.smartsparrow.rtm.message.recv.courseware.theme.UpdateCoursewareThemeMessage;
+import com.smartsparrow.rtm.message.recv.courseware.theme.UpdateThemeVariantMessage;
+import com.smartsparrow.rtm.message.recv.diffsync.DiffSyncAckMessage;
+import com.smartsparrow.rtm.message.recv.diffsync.DiffSyncEndMessage;
+import com.smartsparrow.rtm.message.recv.diffsync.DiffSyncPatchMessage;
+import com.smartsparrow.rtm.message.recv.diffsync.DiffSyncStartMessage;
+import com.smartsparrow.rtm.message.recv.iam.AccountProvisionMessage;
+import com.smartsparrow.rtm.message.recv.iam.AccountShadowAttributeMessage;
+import com.smartsparrow.rtm.message.recv.iam.AccountSubscriptionMigrateMessage;
+import com.smartsparrow.rtm.message.recv.iam.AccountSubscriptionProvisionMessage;
+import com.smartsparrow.rtm.message.recv.iam.AssumeTokenMessage;
+import com.smartsparrow.rtm.message.recv.iam.CredentialMessage;
+import com.smartsparrow.rtm.message.recv.iam.EditRoleMessage;
+import com.smartsparrow.rtm.message.recv.iam.GrantSubscriptionPermissionMessage;
+import com.smartsparrow.rtm.message.recv.iam.MyCloudAuthorizeMessage;
+import com.smartsparrow.rtm.message.recv.iam.SetAccountPasswordMessage;
+import com.smartsparrow.rtm.message.recv.iam.SetPasswordMessage;
+import com.smartsparrow.rtm.message.recv.iam.SubscriptionCollaboratorSummayMessage;
+import com.smartsparrow.rtm.message.recv.ingestion.IngestionGenericMessage;
+import com.smartsparrow.rtm.message.recv.ingestion.IngestionRootGenericMessage;
+import com.smartsparrow.rtm.message.recv.ingestion.IngestionUpdateMessage;
+import com.smartsparrow.rtm.message.recv.ingestion.ProjectIngestionCreateMessage;
+import com.smartsparrow.rtm.message.recv.ingestion.ProjectIngestionListMessage;
+import com.smartsparrow.rtm.message.recv.ingestion.ProjectIngestionRequestMessage;
+import com.smartsparrow.rtm.message.recv.ingestion.ProjectIngestionStartMessage;
+import com.smartsparrow.rtm.message.recv.math.MathAssetCreateMessage;
+import com.smartsparrow.rtm.message.recv.math.MathAssetGetMessage;
+import com.smartsparrow.rtm.message.recv.math.MathAssetRemoveMessage;
+import com.smartsparrow.rtm.message.recv.plugin.CreateLTIPluginCredentialMessage;
+import com.smartsparrow.rtm.message.recv.plugin.CreatePluginMessage;
+import com.smartsparrow.rtm.message.recv.plugin.DeletePluginVersionMessage;
+import com.smartsparrow.rtm.message.recv.plugin.GetPluginInfoMessage;
+import com.smartsparrow.rtm.message.recv.plugin.GetPluginVersionsMessage;
+import com.smartsparrow.rtm.message.recv.plugin.GetPublishedPluginMessage;
+import com.smartsparrow.rtm.message.recv.plugin.LTIPluginMessage;
+import com.smartsparrow.rtm.message.recv.plugin.ListPluginsMessage;
+import com.smartsparrow.rtm.message.recv.plugin.PluginAccountSummaryMessage;
+import com.smartsparrow.rtm.message.recv.plugin.PluginGenericMessage;
+import com.smartsparrow.rtm.message.recv.plugin.PluginPermissionMessage;
+import com.smartsparrow.rtm.message.recv.plugin.PluginVersionUnpublishMessage;
+import com.smartsparrow.rtm.message.recv.plugin.RevokePluginPermissionMessage;
+import com.smartsparrow.rtm.message.recv.plugin.SyncPluginMessage;
+import com.smartsparrow.rtm.message.recv.plugin.UpdatePluginMessage;
+import com.smartsparrow.rtm.message.recv.plugin.WorkspacePluginLogMessage;
+import com.smartsparrow.rtm.message.recv.team.CreateTeamMessage;
+import com.smartsparrow.rtm.message.recv.team.DeleteTeamMessage;
+import com.smartsparrow.rtm.message.recv.team.RevokeTeamPermissionMessage;
+import com.smartsparrow.rtm.message.recv.team.TeamAccountSummaryMessage;
+import com.smartsparrow.rtm.message.recv.team.TeamPermissionMessage;
+import com.smartsparrow.rtm.message.recv.team.UpdateTeamMessage;
+import com.smartsparrow.rtm.message.recv.user_content.FavoriteMessage;
+import com.smartsparrow.rtm.message.recv.user_content.RecentlyViewedMessage;
+import com.smartsparrow.rtm.message.recv.user_content.SharedResourceMessage;
+import com.smartsparrow.rtm.message.recv.workspace.ChangeWorkspaceMessage;
+import com.smartsparrow.rtm.message.recv.workspace.CreateProjectActivityMessage;
+import com.smartsparrow.rtm.message.recv.workspace.CreateWorkspaceMessage;
+import com.smartsparrow.rtm.message.recv.workspace.CreateWorkspaceProjectMessage;
+import com.smartsparrow.rtm.message.recv.workspace.DeleteProjectActivityMessage;
+import com.smartsparrow.rtm.message.recv.workspace.DeleteWorkspaceMessage;
+import com.smartsparrow.rtm.message.recv.workspace.ElementChangeLogListMessage;
+import com.smartsparrow.rtm.message.recv.workspace.GrantProjectPermissionMessage;
+import com.smartsparrow.rtm.message.recv.workspace.GrantWorkspacePermissionMessage;
+import com.smartsparrow.rtm.message.recv.workspace.ListProjectCollaboratorMessage;
+import com.smartsparrow.rtm.message.recv.workspace.ListWorkspaceCollaboratorMessage;
+import com.smartsparrow.rtm.message.recv.workspace.ProjectActivityListMessage;
+import com.smartsparrow.rtm.message.recv.workspace.ProjectChangeLogListMessage;
+import com.smartsparrow.rtm.message.recv.workspace.ProjectGenericMessage;
+import com.smartsparrow.rtm.message.recv.workspace.RevokeProjectPermissionMessage;
+import com.smartsparrow.rtm.message.recv.workspace.RevokeWorkspacePermissionMessage;
+import com.smartsparrow.rtm.message.recv.workspace.WorkspaceProjectMoveMessage;
+import com.smartsparrow.rtm.message.recv.workspace.WorkspaceProjectReplaceMessage;
+import com.smartsparrow.rtm.wiring.RTMMessageBindingException;
+import com.smartsparrow.rtm.wiring.RTMMessageOperations;
+
+/**
+ * Wires RTM message apis that are relevant to the workspace
+ */
+public class WorkspaceRTMOperationsBinding {
+
+    private final RTMMessageOperations binder;
+
+    public WorkspaceRTMOperationsBinding(RTMMessageOperations binder) {
+        this.binder = binder;
+    }
+
+    public void bind() throws RTMMessageBindingException {
+        binder.bind(DELAY) //
+                .toMessageType(DelayedMessage.class) //
+                .withAuthorizers(Everyone.class) //
+                .withMessageHandlers(DelayedMessageHandler.class);
+
+        binder.bind(TIME) //
+                .toMessageType(EmptyReceivedMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class) //
+                .withMessageHandlers(TimeMessageHandler.class);
+
+        binder.bind(TIME_SUBSCRIBE) //
+                .toMessageType(TimeMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class) //
+                .withMessageHandlers(TimeSubscribeMessageHandler.class);
+
+        binder.bind(TIME_UNSUBSCRIBE) //
+                .toMessageType(TimeMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class) //
+                .withMessageHandlers(TimeUnsubscribeMessageHandler.class);
+
+        binder.bind(MYCLOUD_AUTHORIZE)
+                .toMessageType(MyCloudAuthorizeMessage.class)
+                .withAuthorizers(Everyone.class)
+                .withMessageHandlers(MyCloudAuthorizeMessageHandler.class);
+
+        /* IAM messages */
+
+        binder.bind(ME_AVATAR_SET) //
+                .toMessageType(SetAvatarMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class) //
+                .withMessageHandlers(SetAvatarMessageHandler.class);
+
+        binder.bind(IAM_INSTRUCTOR_PROVISION) //
+                .toMessageType(AccountProvisionMessage.class) //
+                .withAuthorizers(Everyone.class) //
+                .withMessageHandlers(AccountProvisionMessageHandler.class);
+
+        binder.bind(IAM_STUDENT_PROVISION) //
+                .toMessageType(AccountProvisionMessage.class) //
+                .withAuthorizers(Everyone.class) //
+                .withMessageHandlers(AccountProvisionMessageHandler.class);
+
+        binder.bind(IAM_SUBSCRIPTION_USER_PROVISION) //
+                .toMessageType(AccountSubscriptionProvisionMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowSelfSubscriptionContributorOrHigher.class) //
+                .withMessageHandlers(SubscriptionAccountProvisionMessageHandler.class);
+
+        binder.bind(IAM_DEVKEY_CREATE) //
+                .toMessageType(EmptyReceivedMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class) //
+                .withMessageHandlers(DeveloperKeyProvisionMessageHandler.class);
+
+        binder.bind(IAM_LTI_CONSUMER_KEY_CREATE) //
+                .toMessageType(EmptyReceivedMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class) //
+                .withMessageHandlers(LTIConsumerKeyCreateMessageHandler.class);
+
+        binder.bind(IAM_ADD_ROLE)
+                .toMessageType(EditRoleMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowAccountSubscriptionContributorOrHigher.class,
+                        AllowEditEqualOrLowerRoles.class)
+                .withMessageHandlers(AddRoleMessageHandler.class);
+
+        binder.bind(IAM_REMOVE_ROLE)
+                .toMessageType(EditRoleMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowAccountSubscriptionContributorOrHigher.class,
+                        AllowEditEqualOrLowerRoles.class)
+                .withMessageHandlers(RemoveRoleMessageHandler.class);
+
+        binder.bind(IAM_SUBSCRIPTION_USER_LIST) //
+                .toMessageType(EmptyReceivedMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowSelfSubscriptionReviewerOrHigher.class)
+                .withMessageHandlers(ListUserMessageHandler.class);
+
+        binder.bind(IAM_SUBSCRIPTION_COLLABORATOR_SUMMARY)
+                .toMessageType(SubscriptionCollaboratorSummayMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowSubscriptionReviewerOrHigher.class)
+                .withMessageHandlers(SubscriptionCollaboratorSummaryMessageHandler.class);
+
+        binder.bind(IAM_SUBSCRIPTION_PERMISSION_GRANT) //
+                .toMessageType(GrantSubscriptionPermissionMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowSubscriptionContributorOrHigher.class,
+                        AllowGrantEqualOrHigherSubscriptionPermission.class)
+                .withMessageHandlers(GrantSubscriptionPermissionMessageHandler.class);
+
+        binder.bind(IAM_ACCOUNT_SUBSCRIPTION_MIGRATE)
+                .toMessageType(AccountSubscriptionMigrateMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowSelfSubscriptionContributorOrHigher.class)
+                .withMessageHandlers(AccountSubscriptionMigrateMessageHandler.class);
+
+        binder.bind(IAM_TEAM_ACCOUNT_SUMMARY)
+                .toMessageType(TeamAccountSummaryMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(TeamAccountSummaryMessageHandler.class);
+
+        binder.bind(IAM_TEAM_LIST)
+                .toMessageType(ListMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(ListTeamMessageHandler.class);
+
+        binder.bind(IAM_TEAM_CREATE)
+                .toMessageType(CreateTeamMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowSelfSubscriptionContributorOrHigher.class)
+                .withMessageHandlers(CreateTeamMessageHandler.class);
+
+        binder.bind(IAM_TEAM_UPDATE)
+                .toMessageType(UpdateTeamMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowTeamContributorOrHigher.class)
+                .withMessageHandlers(UpdateTeamMessageHandler.class);
+
+        binder.bind(IAM_TEAM_DELETE)
+                .toMessageType(DeleteTeamMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowTeamOwnerOrHigher.class, AllowSubscriptionOwnerOrHigher.class)
+                .withMessageHandlers(DeleteTeamMessageHandler.class);
+
+        binder.bind(IAM_TEAM_PERMISSION_GRANT) //
+                .toMessageType(TeamPermissionMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class,
+                        AllowTeamContributorOrHigher.class, AllowEqualOrHigherTeamPermissionLevel.class) //
+                .withMessageHandlers(GrantTeamPermissionMessageHandler.class); //
+
+        binder.bind(IAM_TEAM_PERMISSION_REVOKE) //
+                .toMessageType(RevokeTeamPermissionMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowTeamContributorOrHigher.class,
+                        AllowEqualOrHigherTeamPermissionLevel.class) //
+                .withMessageHandlers(RevokeTeamPermissionMessageHandler.class); //
+
+        binder.bind(IAM_TEAM_SUBSCRIPTION_LIST)
+                .toMessageType(ListMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowSelfSubscriptionReviewerOrHigher.class)
+                .withMessageHandlers(ListSubscriptionTeamsMessageHandler.class);
+
+        binder.bind(IAM_OIDC_PROVIDER_CREATE) //
+                .toMessageType(CreateOIDCProviderMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowAdmin.class) //
+                .withMessageHandlers(CreateOIDCProviderMessageHandler.class);
+
+        binder.bind(IAM_ASSUME_TOKEN) //
+                .toMessageType(AssumeTokenMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowSupport.class) //
+                .withMessageHandlers(AssumeTokenMessageHandler.class);
+
+        binder.bind(IAM_ACCOUNT_PASSWORD_SET) //
+                .toMessageType(SetAccountPasswordMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowSupport.class) //
+                .withMessageHandlers(SetAccountPasswordMessageHandler.class);
+
+        binder.bind(IAM_PASSWORD_SET) //
+                .toMessageType(SetPasswordMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class) //
+                .withMessageHandlers(SetPasswordMessageHandler.class);
+
+        /* IAM Subs */
+
+        binder.bind(IAM_ACCOUNT_PROVISION_SUBSCRIBE) //
+                .toMessageType(EmptyReceivedMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowSelfSubscriptionContributorOrHigher.class)
+                .withMessageHandlers(AccountProvisionSubscribeHandler.class);
+
+        /* Workspace messages */
+
+        binder.bind(WORKSPACE_SUBSCRIBE)
+                .toMessageType(WorkspaceGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowWorkspaceReviewerOrHigher.class)
+                .withMessageHandlers(WorkspaceSubscribeMessageHandler.class);
+
+        binder.bind(WORKSPACE_UNSUBSCRIBE)
+                .toMessageType(WorkspaceGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowWorkspaceReviewerOrHigher.class)
+                .withMessageHandlers(WorkspaceUnsubscribeMessageHandler.class);
+
+        binder.bind(WORKSPACE_COURSEWARE_ELEMENT_INFO_SET)
+                .toMessageType(SetCoursewareElementMetaInformationMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(SetCoursewareElementMetaInformationMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class);
+
+        binder.bind(WORKSPACE_COURSEWARE_ELEMENT_INFO_GET)
+                .toMessageType(GetCoursewareElementMetaInformationMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(GetCoursewareElementMetaInformationMessageHandler.class);
+
+        binder.bind(WORKSPACE_PLUGIN_GET) //
+                .toMessageType(GetPluginInfoMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class) //
+                .withMessageHandlers(GetPluginInfoMessageHandler.class);
+
+        binder.bind(WORKSPACE_PLUGIN_CREATE) //
+                .toMessageType(CreatePluginMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class) //
+                .withMessageHandlers(CreatePluginMessageHandler.class);
+
+        binder.bind(WORKSPACE_PLUGIN_SYNC) //
+                .toMessageType(SyncPluginMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowPluginSync.class, AllowAdmin.class,
+                        AllowSelfSubscriptionContributorOrHigher.class) //
+                .withMessageHandlers(SyncPluginMessageHandler.class);
+
+        binder.bind(WORKSPACE_PLUGIN_LIST) //
+                .toMessageType(EmptyReceivedMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(ListPluginMessageHandler.class);
+
+        binder.bind(WORKSPACE_PLUGIN_VERSION_LIST) //
+                .toMessageType(GetPluginVersionsMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class) //
+                .withMessageHandlers(GetPluginVersionsMessageHandler.class);
+
+        binder.bind(WORKSPACE_PLUGIN_GRANT_PERMISSION) //
+                .toMessageType(PluginPermissionMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowPluginContributorOrHigher.class,
+                        AllowEqualOrHigherPluginPermissionLevel.class) //
+                .withMessageHandlers(GrantPluginPermissionMessageHandler.class);
+
+        binder.bind(WORKSPACE_PLUGIN_PERMISSION_REVOKE) //
+                .toMessageType(RevokePluginPermissionMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowPluginContributorOrHigher.class,
+                        AllowEqualOrHigherPluginPermissionLevel.class) //
+                .withMessageHandlers(RevokePluginPermissionMessageHandler.class);
+
+        binder.bind(WORKSPACE_PLUGIN_ACCOUNT_SUMMARY) //
+                .toMessageType(PluginAccountSummaryMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowPluginReviewerOrHigher.class)
+                .withMessageHandlers(PluginAccountSummaryMessageHandler.class);
+
+        binder.bind(WORKSPACE_PLUGIN_ACCOUNT_LIST) //
+                .toMessageType(PluginGenericMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowPluginReviewerOrHigher.class)
+                .withMessageHandlers(PluginAccountListMessageHandler.class);
+
+        binder.bind(WORKSPACE_PLUGIN_COLLABORATOR_SUMMARY) //
+                .toMessageType(PluginAccountSummaryMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowPluginReviewerOrHigher.class)
+                .withMessageHandlers(PluginCollaboratorSummaryMessageHandler.class);
+
+        binder.bind(WORKSPACE_PLUGIN_DELETE)
+                .toMessageType(PluginGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowPluginOwner.class)
+                .withMessageHandlers(DeletePluginMessageHandler.class);
+
+        binder.bind(WORKSPACE_COHORT_ACCOUNT_ENROLL)
+                .toMessageType(CohortEnrollmentMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCohortContributorOrHigher.class)
+                .withMessageHandlers(CohortEnrollAccountMessageHandler.class);
+
+        binder.bind(WORKSPACE_COHORT_ENROLLMENT_LIST)
+                .toMessageType(CohortGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCohortReviewerOrHigher.class)
+                .withMessageHandlers(CohortEnrollmentListMessageHandler.class);
+
+        binder.bind(WORKSPACE_COHORT_ACCOUNT_DISENROLL)
+                .toMessageType(CohortEnrollmentMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCohortContributorOrHigher.class)
+                .withMessageHandlers(CohortDisenrollAccountMessageHandler.class);
+
+        binder.bind(WORKSPACE_COHORT_COLLABORATOR_SUMMARY)
+                .toMessageType(CohortCollaboratorSummaryMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCohortReviewerOrHigher.class)
+                .withMessageHandlers(CohortAccountSummaryMessageHandler.class);
+
+        binder.bind(WORKSPACE_COHORT_CREATE)
+                .toMessageType(CreateCohortMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowWorkspaceContributorOrHigher.class) //
+                .withMessageHandlers(CreateCohortMessageHandler.class);
+
+        binder.bind(WORKSPACE_COHORT_GET)
+                .toMessageType(CohortGenericMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCohortReviewerOrHigher.class) //
+                .withMessageHandlers(GetCohortMessageHandler.class);
+
+        binder.bind(WORKSPACE_COHORT_CHANGE)
+                .toMessageType(ChangeCohortMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCohortContributorOrHigher.class) //
+                .withMessageHandlers(ChangeCohortMessageHandler.class)
+                .withEventPublishers(UpdateProductLearnerRedirectEventPublisher.class);
+
+        binder.bind(WORKSPACE_COHORT_PERMISSION_GRANT) //
+                .toMessageType(GrantCohortPermissionMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCohortContributorOrHigher.class,
+                        AllowGrantEqualOrHigherCohortPermissionLevel.class) //
+                .withMessageHandlers(GrantCohortPermissionMessageHandler.class);
+
+        binder.bind(WORKSPACE_COHORT_LIST)
+                .toMessageType(CohortListMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(CohortListMessageHandler.class);
+
+        binder.bind(WORKSPACE_COHORT_PERMISSION_REVOKE)
+                .toMessageType(RevokeCohortPermissionMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCohortContributorOrHigher.class,
+                        AllowRevokeEqualOrHigherCohortPermissionLevel.class)
+                .withMessageHandlers(RevokeCohortPermissionMessageHandler.class);
+
+        binder.bind(WORKSPACE_COHORT_ARCHIVE)
+                .toMessageType(CohortGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCohortOwner.class)
+                .withMessageHandlers(ArchiveCohortMessageHandler.class);
+
+        binder.bind(WORKSPACE_COHORT_UNARCHIVE)
+                .toMessageType(CohortGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCohortOwner.class)
+                .withMessageHandlers(UnarchiveCohortMessageHandler.class);
+
+        binder.bind(WORKSPACE_CREATE)
+                .toMessageType(CreateWorkspaceMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowSelfSubscriptionContributorOrHigher.class)
+                .withMessageHandlers(CreateWorkspaceMessageHandler.class);
+
+        binder.bind(WORKSPACE_CHANGE)
+                .toMessageType(ChangeWorkspaceMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowWorkspaceContributorOrHigher.class)
+                .withMessageHandlers(ChangeWorkspaceMessageHandler.class);
+
+        binder.bind(WORKSPACE_LIST)
+                .toMessageType(EmptyReceivedMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(ListWorkspaceMessageHandler.class);
+
+        binder.bind(WORKSPACE_PERMISSION_GRANT)
+                .toMessageType(GrantWorkspacePermissionMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowWorkspaceContributorOrHigher.class,
+                        AllowGrantEqualOrHigherWorkspacePermissionLevel.class)
+                .withMessageHandlers(GrantWorkspacePermissionMessageHandler.class);
+
+        binder.bind(WORKSPACE_PERMISSION_REVOKE)
+                .toMessageType(RevokeWorkspacePermissionMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowWorkspaceContributorOrHigher.class,
+                        AllowRevokeEqualOrHigherWorkspacePermissionLevel.class)
+                .withMessageHandlers(RevokeWorkspacePermissionMessageHandler.class);
+
+        binder.bind(WORKSPACE_COLLABORATOR_SUMMARY)
+                .toMessageType(ListWorkspaceCollaboratorMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowWorkspaceReviewerOrHigher.class)
+                .withMessageHandlers(ListWorkspaceCollaboratorMessageHandler.class);
+
+        binder.bind(WORKSPACE_COMPETENCY_PERMISSION_GRANT)
+                .toMessageType(GrantDocumentPermissionMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class,
+                        AllowDocumentContributorOrHigher.class, AllowGrantEqualOrHigherDocumentPermissionLevel.class)
+                .withMessageHandlers(GrantDocumentPermissionMessageHandler.class);
+
+        binder.bind(WORKSPACE_COMPETENCY_PERMISSION_REVOKE)
+                .toMessageType(RevokeDocumentPermissionMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class,
+                        AllowDocumentContributorOrHigher.class, AllowRevokeEqualOrHigherDocumentPermissionLevel.class)
+                .withMessageHandlers(RevokeDocumentPermissionMessageHandler.class);
+
+        binder.bind(WORKSPACE_COMPETENCY_COLLABORATOR_SUMMARY)
+                .toMessageType(ListCompetencyDocumentCollaboratorMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowDocumentReviewerOrHigher.class)
+                .withMessageHandlers(ListCompetencyDocumentCollaboratorMessageHandler.class);
+
+        binder.bind(WORKSPACE_DELETE)
+                .toMessageType(DeleteWorkspaceMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowWorkspaceOwnerOrHigher.class, AllowSubscriptionOwnerOrHigher.class)
+                .withMessageHandlers(DeleteWorkspaceMessageHandler.class);
+
+        /* Workspace Subs */
+
+        binder.bind(WORKSPACE_PLUGIN_PERMISSION_SUBSCRIBE)
+                .toMessageType(PluginGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowPluginReviewerOrHigher.class)
+                .withMessageHandlers(PluginSubscribeMessageHandler.class);
+
+        binder.bind(WORKSPACE_COHORT_SUBSCRIBE)
+                .toMessageType(CohortGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCohortReviewerOrHigher.class)
+                .withMessageHandlers(CohortSubscribeMessageHandler.class);
+
+        binder.bind(WORKSPACE_COHORT_UNSUBSCRIBE)
+                .toMessageType(CohortGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCohortReviewerOrHigher.class)
+                .withMessageHandlers(CohortUnsubscribeMessageHandler.class);
+
+        /* Project messages */
+
+        binder.bind(PROJECT_ACTIVITY_CREATE)
+                .toMessageType(CreateProjectActivityMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectContributorOrHigher.class)
+                .withMessageHandlers(CreateProjectActivityMessageHandler.class)
+                .withEventPublishers(CoursewareChangeLogEventPublisher.class);
+
+        binder.bind(PROJECT_ACTIVITY_DUPLICATE)
+                .toMessageType(DuplicateActivityProjectMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectContributorOrHigher.class,
+                        AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(DuplicateActivityProjectMessageHandler.class);
+
+        binder.bind(WORKSPACE_PROJECT_GET)
+                .toMessageType(ProjectGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectReviewerOrHigher.class)
+                .withMessageHandlers(GetProjectMessageHandler.class);
+
+        binder.bind(WORKSPACE_PROJECT_CREATE)
+                .toMessageType(CreateWorkspaceProjectMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowWorkspaceContributorOrHigher.class)
+                .withMessageHandlers(CreateWorkspaceProjectMessageHandler.class);
+
+        binder.bind(WORKSPACE_PROJECT_REPLACE)
+                .toMessageType(WorkspaceProjectReplaceMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectContributorOrHigher.class)
+                .withMessageHandlers(WorkspaceProjectReplaceMessageHandler.class);
+
+        binder.bind(WORKSPACE_PROJECT_MOVE)
+                .toMessageType(WorkspaceProjectMoveMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectContributorOrHigher.class)
+                .withMessageHandlers(WorkspaceProjectMoveMessageHandler.class);
+
+        binder.bind(WORKSPACE_PROJECT_PERMISSION_GRANT)
+                .toMessageType(GrantProjectPermissionMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowGrantEqualOrHigherProjectPermissionLevel.class)
+                .withMessageHandlers(GrantProjectPermissionMessageHandler.class);
+
+        binder.bind(WORKSPACE_PROJECT_PERMISSION_REVOKE)
+                .toMessageType(RevokeProjectPermissionMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowRevokeEqualOrHigherProjectPermissionLevel.class)
+                .withMessageHandlers(RevokeProjectPermissionMessageHandler.class);
+
+        binder.bind(WORKSPACE_PROJECT_DELETE)
+                .toMessageType(ProjectGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectOwner.class)
+                .withMessageHandlers(WorkspaceProjectDeleteMessageHandler.class);
+
+        binder.bind(PROJECT_ACTIVITY_DELETE)
+                .toMessageType(DeleteProjectActivityMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectContributorOrHigher.class)
+                .withMessageHandlers(DeleteProjectActivityMessageHandler.class)
+                .withEventPublishers(CoursewareChangeLogEventPublisher.class);
+
+        binder.bind(WORKSPACE_PROJECT_LIST)
+                .toMessageType(WorkspaceGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowWorkspaceReviewerOrHigher.class)
+                .withMessageHandlers(ListWorkspaceProjectMessageHandler.class);
+
+        binder.bind(PROJECT_ACTIVITY_LIST)
+                .toMessageType(ProjectActivityListMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectReviewerOrHigher.class)
+                .withMessageHandlers(ListProjectActivityMessageHandler.class);
+
+        binder.bind(WORKSPACE_PROJECT_COLLABORATOR_SUMMARY)
+                .toMessageType(ListProjectCollaboratorMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectReviewerOrHigher.class)
+                .withMessageHandlers(ListProjectCollaboratorMessageHandler.class);
+
+        /* Project subscription messages */
+        binder.bind(WORKSPACE_PROJECT_SUBSCRIBE)
+                .toMessageType(ProjectGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectReviewerOrHigher.class)
+                .withMessageHandlers(ProjectSubscribeMessageHandler.class);
+
+        binder.bind(WORKSPACE_PROJECT_UNSUBSCRIBE)
+                .toMessageType(ProjectGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectReviewerOrHigher.class)
+                .withMessageHandlers(ProjectUnsubscribeMessageHandler.class);
+
+//        // move project to different workspace message (in a different ticket)
+//        // move activity to different project (in a different ticket)
+
+        /* Knowledge map subscription */
+
+        binder.bind(COMPETENCY_DOCUMENT_SUBSCRIBE)
+                .toMessageType(CompetencyDocumentMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowDocumentReviewerOrHigher.class)
+                .withMessageHandlers(CompetencyDocumentSubscribeMessageHandler.class);
+
+        binder.bind(COMPETENCY_DOCUMENT_UNSUBSCRIBE)
+                .toMessageType(CompetencyDocumentMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowDocumentReviewerOrHigher.class)
+                .withMessageHandlers(CompetencyDocumentUnsubscribeMessageHandler.class);
+
+        /* Author messages */
+
+        binder.bind(AUTHOR_PLUGIN_LIST) //
+                .toMessageType(ListPluginsMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class) //
+                .withMessageHandlers(GetPluginsListMessageHandler.class);
+
+        binder.bind(AUTHOR_PLUGIN_GET) //
+                .toMessageType(GetPublishedPluginMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class) //
+                .withMessageHandlers(GetPublishedPluginMessageHandler.class);
+
+        binder.bind(AUTHOR_STUDENT_SCOPE_REGISTER)
+                .toMessageType(StudentScopeMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(RegisterToStudentScopeMessageHandler.class);
+
+        binder.bind(AUTHOR_STUDENT_SCOPE_DEREGISTER)
+                .toMessageType(StudentScopeMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(DeRegisterFromStudentScopeMessageHandler.class);
+
+        binder.bind(AUTHOR_PLUGIN_VERSION_UNPUBLISH)
+                .toMessageType(PluginVersionUnpublishMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowPluginOwner.class)
+                .withMessageHandlers(UnpublishPluginVersionMessageHandler.class);
+
+        binder.bind(AUTHOR_PLUGIN_VERSION_DELETE)
+                .toMessageType(DeletePluginVersionMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowPluginOwner.class)
+                .withMessageHandlers(DeletePluginVersionMessageHandler.class);
+
+
+        binder.bind(WORKSPACE_PLUGIN_LOG)
+                .toMessageType(WorkspacePluginLogMessage.class)
+                .withAuthorizers(Everyone.class)
+                .withMessageHandlers(WorkspacePluginLogMessageHandler.class);
+
+        //TODO Rewire the handler after fixing
+//        binder.bind(PLUGIN_LOG_CONFIG_UPDATE)
+//                .toMessageType(PluginLogConfigUpdateMessage.class)
+//                .withAuthorizers(AllowAuthenticated.class, AllowSupport.class)
+//                .withMessageHandlers(PluginLogConfigUpdateMessageHandler.class);
+
+        /* Courseware (creation) messages */
+
+        binder.bind(AUTHOR_ACTIVITY_CREATE) //
+                .toMessageType(CreateActivityMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class) //
+                .withMessageHandlers(CreateActivityMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_ACTIVITY_DELETE)
+                .toMessageType(DeleteActivityMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(DeleteActivityMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        DeleteCoursewareAnnotationsEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_ACTIVITY_CONFIG_REPLACE) //
+                .toMessageType(ReplaceActivityConfigMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(ReplaceActivityConfigMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_ACTIVITY_GET)
+                .toMessageType(ActivityGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(GetActivityMessageHandler.class);
+
+        binder.bind(WORKSPACE_DEPLOYMENT_LIST)
+                .toMessageType(ListDeploymentMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCohortReviewerOrHigher.class)
+                .withMessageHandlers(ListDeploymentMessageHandler.class);
+
+        binder.bind(AUTHOR_COMPONENT_MANUAL_GRADING_CONFIGURATION_SET)
+                .toMessageType(ManualGradingConfigurationSetMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(SetManualGradeConfigurationMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_COMPONENT_MANUAL_GRADING_CONFIGURATION_DELETE)
+                .toMessageType(ComponentMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(DeleteManualGradingConfigurationMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_COMPONENT_MANUAL_GRADING_CONFIGURATION_GET)
+                .toMessageType(ComponentMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(GetManualGradingConfigurationMessageHandler.class);
+
+        /* Interactive Scenario messages */
+
+        binder.bind(AUTHOR_SCENARIO_CREATE)
+                .toMessageType(CreateScenarioMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(CreateScenarioMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_SCENARIO_REPLACE)
+                .toMessageType(ReplaceScenarioMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(ReplaceScenarioMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_SCENARIO_LIST)
+                .toMessageType(ListScenarioMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(ListScenarioMessageHandler.class);
+
+        binder.bind(AUTHOR_SCENARIOS_REORDER)
+                .toMessageType(ReorderScenariosMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(ReorderScenariosMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_INTERACTIVE_SCENARIOS_TEST)
+                .toMessageType(InteractiveScenariosTestMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(InteractiveScenariosTestMessageHandler.class);
+
+        binder.bind(AUTHOR_INTERACTIVE_COMPONENT_CREATE)
+                .toMessageType(CreateInteractiveComponentMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(CreateInteractiveComponentMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);
+
+        binder.bind(AUTHOR_COMPONENT_REPLACE)
+                .toMessageType(ReplaceComponentConfigMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(ReplaceComponentConfigMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_INTERACTIVE_COMPONENT_DELETE)
+                .toMessageType(DeleteInteractiveComponentMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(DeleteInteractiveComponentMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_COMPONENT_GET)
+                .toMessageType(ComponentMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(GetComponentMessageHandler.class);
+
+        binder.bind(AUTHOR_ACTIVITY_COMPONENT_CREATE)
+                .toMessageType(CreateActivityComponentMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(CreateActivityComponentMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);
+
+        binder.bind(AUTHOR_ACTIVITY_COMPONENT_DELETE)
+                .toMessageType(DeleteActivityComponentMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(DeleteActivityComponentMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_INTERACTIVE_CREATE)
+                .toMessageType(CreateInteractiveMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(CreateInteractiveMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_INTERACTIVE_GET)
+                .toMessageType(GetInteractiveMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(GetInteractiveMessageHandler.class);
+
+        binder.bind(AUTHOR_INTERACTIVE_CONFIG_REPLACE)
+                .toMessageType(ReplaceInteractiveConfigMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(ReplaceInteractiveConfigMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_INTERACTIVE_DELETE)
+                .toMessageType(DeleteInteractiveMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(DeleteInteractiveMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class,
+                        DeleteCoursewareAnnotationsEventPublisher.class);//
+
+        binder.bind(AUTHOR_INTERACTIVE_FEEDBACK_CREATE)
+                .toMessageType(CreateInteractiveFeedbackMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(CreateInteractiveFeedbackMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_INTERACTIVE_FEEDBACK_REPLACE)
+                .toMessageType(ReplaceInteractiveFeedbackConfigMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(ReplaceInteractiveFeedbackConfigMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_INTERACTIVE_FEEDBACK_DELETE)
+                .toMessageType(DeleteInteractiveFeedbackMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(DeleteInteractiveFeedbackMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_INTERACTIVE_FEEDBACK_GET)
+                .toMessageType(GetInteractiveFeedbackMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(GetInteractiveFeedbackMessageHandler.class);
+
+        binder.bind(AUTHOR_PATHWAY_CREATE)
+                .toMessageType(CreatePathwayMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(CreatePathwayMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_PATHWAY_CONFIG_REPLACE)
+                .toMessageType(ReplacePathwayConfigMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(ReplacePathwayConfigMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class); // TODO check those event publishers //
+
+        binder.bind(AUTHOR_PATHWAY_GET)
+                .toMessageType(GetPathwayMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(GetPathwayMessageHandler.class);
+
+        binder.bind(AUTHOR_PATHWAY_DELETE)
+                .toMessageType(DeletePathwayMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(DeletePathwayMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_WALKABLE_REORDER)
+                .toMessageType(ReorderWalkableMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(ReorderWalkableMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_ACTIVITY_THEME_REPLACE)
+                .toMessageType(ReplaceActivityThemeMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(ReplaceActivityThemeMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_ACTIVITY_DUPLICATE)
+                .toMessageType(DuplicateActivityMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class,
+                        AllowCoursewareElementReviewerOrHigher.class, AllowPathwayContributorOrHigher.class)
+                .withMessageHandlers(DuplicateActivityMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_ACTIVITY_MOVE)
+                .toMessageType(MoveActivityMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class,
+                        AllowCoursewareElementContributorOrHigher.class, AllowPathwayContributorOrHigher.class)
+                .withMessageHandlers(MoveActivityMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class,
+                        MoveCoursewareAnnotationsEventPublisher.class);//
+
+        binder.bind(AUTHOR_INTERACTIVE_DUPLICATE)
+                .toMessageType(DuplicateInteractiveMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class,
+                        AllowCoursewareElementReviewerOrHigher.class, AllowPathwayContributorOrHigher.class)
+                .withMessageHandlers(DuplicateInteractiveMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_INTERACTIVE_MOVE)
+                .toMessageType(MoveInteractiveMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class,
+                        AllowCoursewareElementContributorOrHigher.class, AllowPathwayContributorOrHigher.class)
+                .withMessageHandlers(MoveInteractiveMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_COURSEWARE_BREADCRUMB)
+                .toMessageType(CoursewareBreadcrumbMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(CoursewareBreadcrumbMessageHandler.class);
+
+        /* Author subscription messages */
+        binder.bind(AUTHOR_ACTIVITY_SUBSCRIBE)
+                .toMessageType(ActivityGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(ActivitySubscribeMessageHandler.class);
+
+        binder.bind(AUTHOR_ACTIVITY_UNSUBSCRIBE)
+                .toMessageType(ActivityGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(ActivityUnsubscribeMessageHandler.class);
+
+        /* Asset messages */
+        binder.bind(AUTHOR_ASSET_GET)
+                .toMessageType(GetAssetMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(GetAssetMessageHandler.class);
+
+        binder.bind(AUTHOR_COURSEWARE_ASSET_ADD)
+                .toMessageType(AddAssetMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(AddAssetMessageHandler.class)
+                .withEventPublishers(CoursewareChangeLogEventPublisher.class, ActivityChangeEventPublisher.class);//
+
+        binder.bind(AUTHOR_COURSEWARE_ASSET_REMOVE)
+                .toMessageType(RemoveAssetMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(RemoveAssetMessageHandler.class)
+                .withEventPublishers(CoursewareChangeLogEventPublisher.class, ActivityChangeEventPublisher.class);//
+
+        binder.bind(AUTHOR_COURSEWARE_ASSETS_REMOVE)
+                .toMessageType(RemoveAssetsMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(RemoveAssetsMessageHandler.class)
+                .withEventPublishers(CoursewareChangeLogEventPublisher.class, ActivityChangeEventPublisher.class);//
+
+        binder.bind(AUTHOR_ASSET_CREATE)
+                .toMessageType(CreateAssetMessage.class)
+                .withMessageHandlers(CreateAssetMessageHandler.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class);
+
+        binder.bind(AUTHOR_ALFRESCO_ASSET_SELECT)
+                .toMessageType(SelectAlfrescoAssetMessage.class)
+                .withMessageHandlers(SelectAlfrescoAssetMessageHandler.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class);
+
+        binder.bind(AUTHOR_ALFRESCO_ASSETS_SYNC)
+                .toMessageType(AlfrescoAssetsPullMessage.class)
+                .withMessageHandlers(AlfrescoAssetsPullMessageHandler.class)
+                // TODO this should not be so open. Must add another authorizer, either SUPPORT or DEVELOPER role (most likely SUPPORT)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class);
+
+        binder.bind(AUTHOR_ALFRESCO_ASSETS_PUSH)
+                .toMessageType(AlfrescoAssetsPushMessage.class)
+                .withMessageHandlers(AlfrescoAssetsPushMessageHandler.class)
+                // TODO this should not be so open. Must add another authorizer, either SUPPORT or DEVELOPER role (most likely SUPPORT)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class);
+
+        binder.bind(AUTHOR_ALFRESCO_ASSETS_PUSH_COUNT)
+                .toMessageType(ActivityGenericMessage.class)
+                .withMessageHandlers(AlfrescoAssetsPushCountMessageHandler.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class);
+
+        binder.bind(AUTHOR_ALFRESCO_ASSETS_PROGRESS)
+                .toMessageType(AlfrescoAssetsProgressMessage.class)
+                .withMessageHandlers(AlfrescoAssetsProgressMessageHandler.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementReviewerOrHigher.class);
+
+        /* Changelog Messages */
+        binder.bind(PROJECT_CHANGELOG_LIST)
+                .toMessageType(ProjectChangeLogListMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectReviewerOrHigher.class)
+                .withMessageHandlers(ListProjectChangeLogMessageHandler.class);
+
+        binder.bind(ELEMENT_CHANGELOG_LIST)
+                .toMessageType(ElementChangeLogListMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(ListElementChangeLogMessageHandler.class);
+
+        binder.bind(PROJECT_CHANGELOG_SUBSCRIBE)
+                .toMessageType(ProjectGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectReviewerOrHigher.class)
+                .withMessageHandlers(ProjectChangeLogSubscribeMessageHandler.class);
+
+        binder.bind(PROJECT_CHANGELOG_UNSUBSCRIBE)
+                .toMessageType(ProjectGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectReviewerOrHigher.class)
+                .withMessageHandlers(ProjectChangeLogUnsubscribeMessageHandler.class);
+
+        binder.bind(ACTIVITY_CHANGELOG_SUBSCRIBE)
+                .toMessageType(ActivityGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(ActivityChangeLogSubscribeMessageHandler.class);
+
+        binder.bind(ACTIVITY_CHANGELOG_UNSUBSCRIBE)
+                .toMessageType(ActivityGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(ActivityChangeLogUnsubscribeMessageHandler.class);
+
+        /* GraphQL Messages */
+        binder.bind(GRAPHQL_QUERY) //
+                .toMessageType(GraphQLQueryMessage.class) //
+                .withAuthorizers(AllowAuthenticated.class) //
+                .withMessageHandlers(GraphQLQueryMessageHandler.class);
+
+        /* Courseware description message */
+        binder.bind(COURSEWARE_DESCRIPTION_SET)
+                .toMessageType(CoursewareElementDescriptionMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(CoursewareElementDescriptionMessageHandler.class);//
+
+        binder.bind(PROJECT_ACTIVITY_PUBLISH)
+                .toMessageType(PublishActivityMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class,
+                        AllowCohortContributorOrHigher.class)
+                .withMessageHandlers(PublishProjectActivityMessageHandler.class)
+                .withEventPublishers(UpdateProductLearnerRedirectEventPublisher.class, ContentSeedingEventPublisher.class);
+
+        /* LTI Provider Credential Create Configuration Handler */
+        binder.bind(LTI_CREDENTIAL_CREATE)
+                .toMessageType(CreateLTIPluginCredentialMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowSupport.class)
+                .withMessageHandlers(CreateLTICredentialPluginMessageHandler.class);
+
+        /* LTI Provider Credential Delete Configuration Handler */
+        binder.bind(LTI_CREDENTIAL_DELETE)
+                .toMessageType(LTIPluginMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowSupport.class)
+                .withMessageHandlers(DeleteLTICredentialPluginMessageHandler.class);
+
+        binder.bind(ASSET_SIGNATURE_CONFIG_CREATE)
+                .toMessageType(CreateAssetSignatureConfigMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowSupport.class)
+                .withMessageHandlers(CreateAssetSignatureConfigMessageHandler.class);
+
+        binder.bind(ASSET_SIGNATURE_CONFIG_DELETE)
+                .toMessageType(DeleteAssetSignatureConfigMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowSupport.class)
+                .withMessageHandlers(DeleteAssetSignatureConfigMessageHandler.class);
+
+        /* Courseware Annotation Messages */
+        binder.bind(AUTHOR_ANNOTATION_CREATE)
+                .toMessageType(CreateCoursewareAnnotationMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareAnnotationAuthorizer.class)
+                .withMessageHandlers(CreateCoursewareAnnotationMessageHandler.class)
+                .withEventPublishers(CoursewareChangeLogEventPublisher.class, ActivityChangeEventPublisher.class);//
+
+        binder.bind(AUTHOR_ANNOTATION_UPDATE)
+                .toMessageType(UpdateCoursewareAnnotationMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowUpdateCoursewareAnnotationAuthorizer.class)
+                .withMessageHandlers(UpdateCoursewareAnnotationMessageHandler.class)
+                .withEventPublishers(CoursewareChangeLogEventPublisher.class, ActivityChangeEventPublisher.class);//
+
+        binder.bind(AUTHOR_ANNOTATION_LIST)
+                .toMessageType(ListCoursewareAnnotationMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowListCoursewareAnnotationAuthorizer.class)
+                .withMessageHandlers(ListCoursewareAnnotationMessageHandler.class);
+
+        binder.bind(AUTHOR_ANNOTATION_AGGREGATE)
+                .toMessageType(ListCoursewareAnnotationMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowListCoursewareAnnotationAuthorizer.class)
+                .withMessageHandlers(AggregateCoursewareAnnotationMessageHandler.class);
+
+        binder.bind(AUTHOR_ANNOTATION_DELETE)
+                .toMessageType(DeleteCoursewareAnnotationMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowDeleteCoursewareAnnotationAuthorizer.class)
+                .withMessageHandlers(DeleteCoursewareAnnotationMessageHandler.class)
+                .withEventPublishers(CoursewareChangeLogEventPublisher.class, ActivityChangeEventPublisher.class);//
+
+        binder.bind(AUTHOR_ANNOTATION_RESOLVE)
+                .toMessageType(ResolveCoursewareAnnotationMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowResolveCoursewareAnnotationAuthorizer.class)
+                .withMessageHandlers(ResolveCoursewareAnnotationMessageHandler.class);
+
+        binder.bind(AUTHOR_ANNOTATION_READ)
+                .toMessageType(ReadCoursewareAnnotationMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(ReadCoursewareAnnotationMessageHandler.class);
+
+        binder.bind(AUTHOR_ANNOTATION_GET)
+                .toMessageType(GetCoursewareAnnotationMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(GetCoursewareAnnotationMessageHandler.class);
+
+        binder.bind(AUTHOR_EVALUABLE_SET)
+                .toMessageType(CoursewareEvaluableMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(CoursewareEvaluableMessageHandler.class)
+                .withEventPublishers(CoursewareChangeLogEventPublisher.class, ActivityChangeEventPublisher.class);//
+
+        binder.bind(AUTHOR_EVALUABLE_GET)
+                .toMessageType(GetCoursewareEvaluableMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(GetCoursewareEvaluableMessageHandler.class);
+
+        /* Courseware structure messages */
+        binder.bind(COURSEWARE_STRUCTURE_GET)
+                .toMessageType(GetCoursewareElementStructureMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(GetCoursewareStructureMessageHandler.class);
+
+        binder.bind(COURSEWARE_STRUCTURE_NAVIGATE)
+                .toMessageType(GetCoursewareElementStructureNavigateMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(GetCoursewareStructureNavigateMessageHandler.class);
+
+        binder.bind(SUPPORT_COURSEWARE_STRUCTURE_GET)
+                .toMessageType(GetCoursewareElementStructureMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowSupport.class) //
+                .withMessageHandlers(GetCoursewareSupportStructureMessageHandler.class);
+
+        // Courseware export message
+        binder.bind(AUTHOR_EXPORT_REQUEST)
+                .toMessageType(CreateCoursewareRootElementExportMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowCoursewareRootElementExportAuthorizer.class)
+                .withMessageHandlers(ActivityExportRequestMessageHandler.class);
+
+        binder.bind(WORKSPACE_EXPORT_LIST)
+                .toMessageType(WorkspaceGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowWorkspaceReviewerOrHigher.class)
+                .withMessageHandlers(WorkspaceExportListMessageHandler.class);
+
+        binder.bind(PROJECT_EXPORT_LIST)
+                .toMessageType(ProjectGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectReviewerOrHigher.class)
+                .withMessageHandlers(ProjectExportListMessageHandler.class);
+
+        binder.bind(AUTHOR_ELEMENT_EXPORT_REQUEST)
+                .toMessageType(CreateCoursewareElementExportMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowCoursewareElementExportAuthorizer.class)
+                .withMessageHandlers(ElementExportRequestMessageHandler.class);
+
+        binder.bind(AUTHOR_ELEMENT_EXPORT_ERROR_RESULT)
+                .toMessageType(ExportGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowSupport.class)
+                .withMessageHandlers(ExportErrorMessageHandler.class);
+
+        /* Courseware export subscription messages */
+        binder.bind(AUTHOR_EXPORT_SUBSCRIBE)
+                .toMessageType(ExportGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(ActivityExportSubscribeMessageHandler.class);
+
+        binder.bind(AUTHOR_EXPORT_UNSUBSCRIBE)
+                .toMessageType(ExportGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(ActivityExportUnsubscribeMessageHandler.class);
+
+        binder.bind(WORKSPACE_PLUGIN_UPDATE)
+                .toMessageType(UpdatePluginMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowPluginOwner.class)
+                .withMessageHandlers(UpdatePluginMessageHandler.class);
+
+        /* fetch sources registered to a scope */
+        binder.bind(AUTHOR_SOURCE_SCOPE_LIST)
+                .toMessageType(ListSourcesRegisteredToScopeMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class,AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(ListSourcesRegisteredToScopeMessageHandler.class);
+
+        /* fetch project summary */
+        binder.bind(AUTHOR_COURSEWARE_PROJECT_FIND)
+                .toMessageType(FindCoursewareProjectMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class,AllowCoursewareElementReviewerOrHigher.class)
+                .withMessageHandlers(FindCoursewareProjectSummaryMessageHandler.class);
+
+        /* Create a theme*/
+        binder.bind(AUTHOR_THEME_CREATE)
+                .toMessageType(CreateCoursewareThemeMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowWorkspaceContributorOrHigher.class)
+                .withMessageHandlers(CreateCoursewareThemeMessageHandler.class);
+
+        /* Courseware self ingestion messages */
+        binder.bind(PROJECT_INGESTION_REQUEST)
+                .toMessageType(ProjectIngestionRequestMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectContributorOrHigher.class, AllowProjectOwner.class)
+                .withMessageHandlers(ProjectIngestionRequestMessageHandler.class)
+                .withEventPublishers(ProjectEventPublisher.class);
+
+        binder.bind(PROJECT_INGESTION_GET)
+                .toMessageType(IngestionGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectIngestionReviewerOrHigher.class, AllowProjectIngestionOwner.class)
+                .withMessageHandlers(ProjectIngestionGetMessageHandler.class);
+
+        binder.bind(PROJECT_INGESTION_LOG_LIST)
+                .toMessageType(IngestionGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectIngestionReviewerOrHigher.class,
+                                 AllowProjectIngestionOwner.class)
+                .withMessageHandlers(ProjectIngestionLogListMessageHandler.class);
+
+        binder.bind(PROJECT_INGESTION_LIST)
+                .toMessageType(ProjectIngestionListMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectReviewerOrHigher.class, AllowProjectOwner.class)
+                .withMessageHandlers(ProjectIngestionListMessageHandler.class);
+
+        binder.bind(PROJECT_INGESTION_CREATE)
+                .toMessageType(ProjectIngestionCreateMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowProjectOwner.class, AllowProjectReviewerOrHigher.class)
+                .withMessageHandlers(ProjectIngestionCreateMessageHandler.class)
+                .withEventPublishers(ProjectEventPublisher.class);
+
+        binder.bind(PROJECT_INGESTION_START)
+                .toMessageType(ProjectIngestionStartMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectIngestionContributorOrHigher.class, AllowProjectIngestionOwner.class)
+                .withMessageHandlers(ProjectIngestionStartMessageHandler.class);
+
+        binder.bind(PROJECT_INGESTION_UPDATE)
+                .toMessageType(IngestionUpdateMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectIngestionContributorOrHigher.class, AllowProjectIngestionOwner.class)
+                .withMessageHandlers(ProjectIngestionUpdateMessageHandler.class)
+                .withEventPublishers(ProjectEventPublisher.class);
+
+        binder.bind(PROJECT_INGESTION_DELETE)
+                .toMessageType(IngestionGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectIngestionContributorOrHigher.class, AllowProjectIngestionOwner.class)
+                .withMessageHandlers(ProjectIngestionDeleteMessageHandler.class)
+                .withEventPublishers(ProjectEventPublisher.class);
+
+        /* Ingestion subscription messages */
+        binder.bind(PROJECT_INGEST_SUBSCRIBE)
+                .toMessageType(IngestionGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectIngestionReviewerOrHigher.class, AllowProjectIngestionOwner.class)
+                .withMessageHandlers(IngestionSubscribeMessageHandler.class);
+
+        binder.bind(PROJECT_INGEST_UNSUBSCRIBE)
+                .toMessageType(IngestionGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectIngestionReviewerOrHigher.class, AllowProjectIngestionOwner.class)
+                .withMessageHandlers(IngestionUnsubscribeMessageHandler.class);
+
+        /* Update a theme*/
+        binder.bind(AUTHOR_THEME_UPDATE)
+                .toMessageType(UpdateCoursewareThemeMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowThemeContributorOrHigher.class)
+                .withMessageHandlers(UpdateCoursewareThemeMessageHandler.class);
+
+        /* grant permission to a theme*/
+        binder.bind(THEME_PERMISSION_GRANT)
+                .toMessageType(GrantThemePermissionMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowThemeContributorOrHigher.class,
+                        AllowGrantEqualOrHigherThemePermissionLevel.class)
+                .withMessageHandlers(GrantThemePermissionMessageHandler.class);
+
+        /* revoke permission to a theme*/
+        binder.bind(THEME_PERMISSION_REVOKE)
+                .toMessageType(RevokeThemePermissionMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowThemeContributorOrHigher.class,
+                        AllowRevokeEqualOrHigherThemePermissionLevel.class)
+                .withMessageHandlers(RevokeThemePermissionMessageHandler.class);
+
+        /* List theme*/
+        binder.bind(AUTHOR_THEME_LIST)
+                .toMessageType(EmptyReceivedMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(ListCoursewareThemeMessageHandler.class);
+
+        /* create publication */
+        binder.bind(PUBLICATION_CREATE_REQUEST)
+                .toMessageType(CreatePublicationMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(CreatePublicationRequestMessageHandler.class);
+
+        /* Update publication title */
+        binder.bind(PUBLICATION_UPDATE_TITLE_REQUEST)
+                .toMessageType(UpdatePublicationTitleMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(UpdatePublicationTitleRequestMessageHandler.class);
+
+
+        /* list publication */
+        binder.bind(PUBLICATION_LIST_REQUEST)
+                .toMessageType(PublicationListMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(ListPublicationRequestMessageHandler.class);
+
+        /* Delete publication history*/
+        binder.bind(PUBLICATION_HISTORY_DELETE)
+                .toMessageType(PublicationHistoryDeleteMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(PublicationHistoryDeleteMessageHandler.class);
+
+        /* element theme association*/
+        binder.bind(AUTHOR_ELEMENT_THEME_CREATE)
+                .toMessageType(CreateElementThemeMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(CreateElementThemeMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_ELEMENT_THEME_DELETE)
+                .toMessageType(DeleteElementThemeMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(DeleteElementThemeMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class,
+                        CoursewareChangeLogEventPublisher.class);//
+
+        binder.bind(AUTHOR_THEME_DELETE)
+                .toMessageType(GenericThemeMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowThemeOwnerOrHigher.class)
+                .withMessageHandlers(DeleteCoursewareThemeMessageHandler.class);
+
+        binder.bind(AUTHOR_THEME_VARIANT_CREATE)
+                .toMessageType(CreateThemeVariantMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowThemeContributorOrHigher.class)
+                .withMessageHandlers(CreateThemeVariantMessageHandler.class);
+
+        binder.bind(AUTHOR_THEME_VARIANT_DELETE)
+                .toMessageType(DeleteThemeVariantMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowThemeContributorOrHigher.class)
+                .withMessageHandlers(DeleteThemeVariantMessageHandler.class);
+
+        binder.bind(AUTHOR_THEME_VARIANT_UPDATE)
+                .toMessageType(UpdateThemeVariantMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowThemeContributorOrHigher.class)
+                .withMessageHandlers(UpdateThemeVariantMessageHandler.class);
+
+        binder.bind(AUTHOR_THEME_VARIANT_GET)
+                .toMessageType(GetThemeVariantMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(AuthorGetThemeVariantMessageHandler.class);
+
+        binder.bind(WORKSPACE_THEME_VARIANT_GET)
+                .toMessageType(GetThemeVariantMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowThemeReviewerOrHigher.class)
+                .withMessageHandlers(WorkspaceGetThemeVariantMessageHandler.class);
+
+        binder.bind(IAM_CREDENTIAL_LIST)
+                .toMessageType(CredentialMessage.class)
+                .withAuthorizers(Everyone.class)
+                .withMessageHandlers(ListCredentialMessageHandler.class);
+
+        binder.bind(AUTHOR_ACCOUNT_SUMMARY_LIST)
+                .toMessageType(ListAccountSummaryMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(ListAccountSummaryMessageHandler.class);
+        /* Publication job status subscribe/unsubscribe */
+        binder.bind(PUBLICATION_JOB_SUBSCRIBE)
+                .toMessageType(PublicationJobGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(PublicationJobSubscribeMessageHandler.class);
+
+        binder.bind(PUBLICATION_JOB_UNSUBSCRIBE)
+                .toMessageType(PublicationJobGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(PublicationJobUnsubscribeMessageHandler.class);
+
+        binder.bind(AUTHOR_ICON_ASSET_LIST)
+                .toMessageType(ListIconAssetMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(ListIconAssetMessageHandler.class);
+
+        binder.bind(IAM_SHADOW_ATTRIBUTE_ADD)
+                .toMessageType(AccountShadowAttributeMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowSupport.class)
+                .withMessageHandlers(AddShadowAttributeMessageHandler.class);
+
+        binder.bind(IAM_SHADOW_ATTRIBUTE_REMOVE)
+                .toMessageType(AccountShadowAttributeMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowSupport.class)
+                .withMessageHandlers(RemoveShadowAttributeMessageHandler.class);
+
+        /* iconLibrary theme association*/
+        binder.bind(AUTHOR_THEME_ICON_LIBRARY_ASSOCIATE)
+                .toMessageType(AssociateThemeIconLibraryMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowThemeContributorOrHigher.class)
+                .withMessageHandlers(AssociateThemeIconLibraryMessageHandler.class);
+
+        binder.bind(PROJECT_INGESTION_ROOT_GET)
+                .toMessageType(IngestionRootGenericMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowProjectRootElementIngestionReviewerOrHigher.class)
+                .withMessageHandlers(ProjectIngestionRootGetMessageHandler.class);
+
+        binder.bind(AUTHOR_ASSET_LIST)
+                .toMessageType(ListAssetMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(ListAssetMessageHandler.class);
+
+        binder.bind(AUTHOR_ASSET_METADATA_UPDATE)
+                .toMessageType(UpdateAssetMetadataMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(UpdateAssetMetadataMessageHandler.class);
+
+        binder.bind(PUBLICATION_OCULUS_STATUS)
+                .toMessageType(PublicationOculusStatusMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(PublicationOculusStatusMessageHandler.class);
+
+        binder.bind(PUBLICATION_ACTIVITY_FETCH)
+                .toMessageType(PublicationActivityFetchMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(PublicationActivityFetchMessageHandler.class);
+
+        binder.bind(PUBLICATION_HISTORY_FETCH)
+                .toMessageType(PublicationHistoryFetchMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(PublicationHistoryFetchMessageHandler.class);
+
+        binder.bind(PUBLICATION_CLASSONDEMAND_PUBLISH_REQUEST)
+                .toMessageType(PublishClassOnDemandMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(PublishClassOnDemandMessageHandler.class);
+
+        binder.bind(AUTHOR_ICON_ASSET_DELETE)
+                .toMessageType(DeleteIconAssetMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(DeleteIconAssetsMessageHandler.class);
+
+        binder.bind(AUTHOR_THEME_COLLABORATOR_SUMMARY)
+                .toMessageType(ListThemeCollaboratorMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowThemeReviewerOrHigher.class)
+                .withMessageHandlers(ListThemeCollaboratorMessageHandler.class);
+
+        /* Math */
+        binder.bind(AUTHOR_MATH_ASSET_CREATE)
+                .toMessageType(MathAssetCreateMessage.class)
+                .withMessageHandlers(MathAssetCreateMessageHandler.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class);
+
+        binder.bind(AUTHOR_MATH_ASSET_GET)
+                .toMessageType(MathAssetGetMessage.class)
+                .withMessageHandlers(MathAssetGetMessageHandler.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class);
+
+        binder.bind(AUTHOR_MATH_ASSET_REMOVE)
+                .toMessageType(MathAssetRemoveMessage.class)
+                .withMessageHandlers(RemoveMathAssetMessageHandler.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class, AllowCoursewareElementContributorOrHigher.class);
+
+        binder.bind(AUTHOR_ACTIVITY_ICON_LIBRARY_ASSOCIATE)
+                .toMessageType(AssociateActivityIconLibraryMessage.class)
+                .withMessageHandlers(AssociateActivityThemeIconLibraryMessageHandler.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class);
+
+        /* User Content Favorite*/
+        binder.bind(USER_CONTENT_SHARED_RESOURCE_CREATE)
+                .toMessageType(SharedResourceMessage.class)
+                .withMessageHandlers(UserSharedResourceCreateMessageHandler.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowSharedResourceContributorOrHigher.class, AllowSharedResourceProjectOwner.class);
+
+        /* User Content Favorite*/
+        binder.bind(USER_CONTENT_FAVORITE_CREATE)
+                .toMessageType(FavoriteMessage.class)
+                .withMessageHandlers(UserFavoriteCreateMessageHandler.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowFavoriteContributorOrHigher.class,
+                                 AllowFavoriteViewedProjectOwner.class);
+
+        binder.bind(USER_CONTENT_FAVORITE_REMOVE)
+                .toMessageType(FavoriteMessage.class)
+                .withMessageHandlers(UserFavoriteRemoveMessageHandler.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowFavoriteContributorOrHigher.class,
+                                 AllowFavoriteViewedProjectOwner.class);
+
+        binder.bind(USER_CONTENT_FAVORITE_GET)
+                .toMessageType(FavoriteMessage.class)
+                .withMessageHandlers(UserFavoriteGetMessageHandler.class)
+                .withAuthorizers(AllowAuthenticated.class);
+
+        /*User content Recently Viewed*/
+        binder.bind(USER_CONTENT_RECENTLY_VIEWED_CREATE)
+                .toMessageType(RecentlyViewedMessage.class)
+                .withMessageHandlers(UserRecentlyViewedCreateMessageHandler.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowRecentlyViewedContributorOrHigher.class, AllowRecentlyViewedProjectOwner.class);
+
+        binder.bind(PUBLICATION_PEARSON_PLUS_PUBLISH_REQUEST)
+                .toMessageType(PublishPearsonPlusMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(PublishPearsonPlusMessageHandler.class);
+
+
+
+        // diff sync
+        binder.bind(DIFF_SYNC_PATCH)
+                .toMessageType(DiffSyncPatchMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(DiffSyncPatchMessageHandler.class);
+
+        binder.bind(DIFF_SYNC_ACK)
+                .toMessageType(DiffSyncAckMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(DiffSyncAckMessageHandler.class);
+
+        // diff sync start and end
+        binder.bind(DIFF_SYNC_START)
+                .toMessageType(DiffSyncStartMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(DiffSyncStartMessageHandler.class);
+
+        binder.bind(DIFF_SYNC_END)
+                .toMessageType(DiffSyncEndMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class)
+                .withMessageHandlers(DiffSyncEndMessageHandler.class);
+
+        binder.bind(AUTHOR_INTERACTIVE_COMPONENT_RESTORE)
+                .toMessageType(RestoreInteractiveComponentMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class,
+                                 AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(RestoreInteractiveComponentMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class, CoursewareChangeLogEventPublisher.class);
+
+        binder.bind(AUTHOR_INTERACTIVE_COMPONENTS_DELETE)
+                .toMessageType(DeleteInteractiveComponentsMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class,
+                                 AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(DeleteInteractiveComponentsMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class, CoursewareChangeLogEventPublisher.class);
+
+        binder.bind(AUTHOR_COMPONENTS_MOVE)
+                .toMessageType(MoveComponentsMessage.class)
+                .withAuthorizers(AllowAuthenticated.class, AllowWorkspaceRoles.class,
+                        AllowCoursewareElementContributorOrHigher.class)
+                .withMessageHandlers(MoveComponentsMessageHandler.class)
+                .withEventPublishers(ActivityChangeEventPublisher.class, CoursewareChangeLogEventPublisher.class);
+    }
+
+}

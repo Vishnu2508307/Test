@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Smart Sparrow LTI page</title>
+</head>
+<body>
+
+    <h3>LTI page</h3>
+    <p>Bearer token: <span id="token"></span></p></body>
+
+    <!--The following script includes the common variable globally-->
+    <script type="text/javascript" src="/js/common.js"></script>
+    <script>
+        // display the bearer token
+        common.addText("token", common.getParameterByName('bearerToken'));
+        // remove the token from the url query params
+        common.removeQueryParams();
+    </script>
+</html>

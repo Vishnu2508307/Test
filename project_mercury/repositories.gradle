@@ -1,0 +1,42 @@
+/*
+ * Define the gradle repositories externally/globally.
+ *
+ * Usage, add to the appropriate block:
+ *     apply from: "${rootDir}/repositories.gradle"
+ *     repositories repos
+ *
+ */
+ext.repos = {
+    // public + SPR dependencies that were migrated from nexus
+//    maven { url "https://artifactory.phx-spr.com/artifactory/public" }
+    jcenter()
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+    // repo for blti-sandwich
+    maven { url 'https://bbprepo.blackboard.com/content/repositories/releases/' }
+    // repo for gradle plugins
+    maven { url 'https://plugins.gradle.org/m2/' }
+    // repo to get person released libs. after getting Nexus access configure Environment variables(nexusUsername,nexusPassword)
+    maven {
+        url "https://nexus.releng.pearsondev.com/repository/Pearson-Releases/"
+        credentials {
+            username findProperty('nexusUsername') ?: "${System.env.nexusUsername}"
+            password findProperty('nexusPassword') ?: "${System.env.nexusPassword}"
+        }
+        authentication {
+            basic(BasicAuthentication)
+        }
+    }
+
+    maven {
+        url "https://nexus.releng.pearsondev.com/repository/all-deps"
+        credentials {
+            username findProperty('nexusUsername') ?: "${System.env.nexusUsername}"
+            password findProperty('nexusPassword') ?: "${System.env.nexusPassword}"
+        }
+        authentication {
+            basic(BasicAuthentication)
+        }
+    }
+    jcenter()
+}

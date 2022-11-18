@@ -1,0 +1,24 @@
+user:
+  mercury:
+    exists: true
+    uid: 1000
+    gid: 1000
+    groups:
+    - mercury
+group:
+  mercury:
+    exists: true
+    gid: 1000
+command:
+  aws --version:
+    exit-status: 0
+    stdout:
+    - 'aws-cli/'
+    stderr: []
+    timeout: 0
+file:
+  /opt/mercury/{{.Vars.mercuryFileName}}:
+    exists: true
+    filetype: file
+    owner: mercury
+    group: mercury

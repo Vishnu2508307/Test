@@ -1,0 +1,2 @@
+ALTER TABLE cohort_enrollment.latest_enrollment_by_cohort_account
+ DROP (payment_id,payment_method);

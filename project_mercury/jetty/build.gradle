@@ -1,0 +1,192 @@
+// these tasks should no longer be used as the pipeline is running the same logic
+// here directly in the container:assemble job of bronte-service-mercury pipeline
+// leaving this file for future reference
+
+apply plugin: 'application'
+apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'org.ajoberstar.grgit'
+
+ext {
+  artifact_version = System.getenv("CURRENT_VERSION") ?: "${grgit.branch.getCurrent().name}-${grgit.head().abbreviatedId}-local"
+  ecr_repo = "585397755241.dkr.ecr.ap-southeast-2.amazonaws.com/service/mercury"
+//  eng_prod_ecr_repo = "585397755241.dkr.ecr.ap-southeast-2.amazonaws.com/service/mercury"
+//  dev_ecr_repo = "716062133555.dkr.ecr.ap-southeast-2.amazonaws.com/service/mercury"
+//  qaint_ecr_repo = "658380148811.dkr.ecr.us-east-1.amazonaws.com/service/mercury"
+//  stg_ecr_repo = "324267317821.dkr.ecr.us-east-1.amazonaws.com/service/mercury"
+//  ppe_ecr_repo = "443982649941.dkr.ecr.us-east-1.amazonaws.com/service/mercury"
+//  prod_usw1_ecr_repo = "591900134539.dkr.ecr.us-west-1.amazonaws.com/service/mercury"
+}
+
+dependencies {
+    compile project(':asset')
+    compile project(':dse')
+    compile project(':rtm')
+    compile project(':rest')
+    compile project(':asset')
+    compile project(':graphql')
+    compile project(':sso')
+    compile project(':learnspace')
+    compile project(':workspace')
+    compile project(':pubsub')
+    compile project(':operations')
+
+    // Jetty
+    implementation 'org.eclipse.jetty:jetty-server:9.4.43.v20210629'
+    implementation 'org.eclipse.jetty:jetty-servlets:9.4.43.v20210629'
+    implementation 'org.eclipse.jetty.websocket:websocket-server:9.4.43.v20210629'
+}
+
+mainClassName = "com.smartsparrow.mercury.Bootstrap"
+
+run {
+    /* Allow for passing all the system properties */
+    systemProperties System.getProperties()
+}
+
+test {
+    useJUnitPlatform()
+    // add test configurations here
+    // see http://junit.org/junit5/docs/current/user-guide/#running-tests-build-gradle
+}
+
+clean.doFirst {
+  delete "${project.buildDir}/libs/"
+}
+
+shadowJar {
+  zip64 = true
+  project.configurations.implementation.canBeResolved(true);
+  project.configurations.runtime.canBeResolved(true);
+  mergeServiceFiles()
+  archiveName = "mercury-${project.ext.artifact_version}-all.jar"
+}
+
+task buildDockerImage (description: 'Builds the mercury image', group: 'release') {
+  doLast {
+    exec {
+      workingDir project.projectDir
+        commandLine 'docker', 'build', '-t', "${project.ext.ecr_repo}:${project.ext.artifact_version}", "."
+      }
+  }
+}
+
+task releaseDockerImage (description: 'Pushes the mercury image onto ECR. If login required, eval $(aws ecr get-login --no-include-email --region ap-southeast-2 --profile aws_profile)', group: 'release') {
+    doLast {
+        exec {
+            workingDir project.projectDir
+            commandLine 'docker', 'push', "${project.ext.ecr_repo}:${project.ext.artifact_version}"
+        }
+    }
+}
+
+/*
+task buildEngProdDockerImage (description: 'Builds the mercury image', group: 'release') {
+    doLast {
+        exec {
+            workingDir project.projectDir
+            commandLine 'docker', 'build', '-t', "${project.ext.eng_prod_ecr_repo}:${project.ext.artifact_version}", "."
+        }
+    }
+}
+
+task releaseEngProdDockerImage (description: 'Pushes the mercury image onto ECR. If login required, eval $(aws ecr get-login --no-include-email --region ap-southeast-2 --profile aws_profile)', group: 'release') {
+  doLast {
+    exec {
+      workingDir project.projectDir
+       commandLine 'docker', 'push', "${project.ext.eng_prod_ecr_repo}:${project.ext.artifact_version}"
+    }
+  }
+}
+
+
+task tagDevDockerImage (description: 'Builds the mercury image', group: 'release') {
+    doLast {
+        exec {
+            workingDir project.projectDir
+            commandLine 'docker', 'tag', "${project.ext.eng_prod_ecr_repo}:${project.ext.artifact_version}", "${project.ext.dev_ecr_repo}:${project.ext.artifact_version}"
+        }
+    }
+}
+
+task releaseDevDockerImage (description: 'Pushes the mercury image onto ECR. If login required, eval $(aws ecr get-login --no-include-email --region ap-southeast-2 --profile aws_profile)', group: 'release') {
+    doLast {
+        exec {
+            workingDir project.projectDir
+            commandLine 'docker', 'push', "${project.ext.dev_ecr_repo}:${project.ext.artifact_version}"
+        }
+    }
+}
+
+task tagQaintDockerImage (description: 'Tag the mercury image', group: 'release') {
+    doLast {
+        exec {
+            workingDir project.projectDir
+            commandLine 'docker', 'tag', "${project.ext.eng_prod_ecr_repo}:${project.ext.artifact_version}", "${project.ext.qaint_ecr_repo}:${project.ext.artifact_version}"
+        }
+    }
+}
+
+task releaseQaintDockerImage (description: 'Pushes the mercury image onto ECR. If login required, eval $(aws ecr get-login --no-include-email --region ap-southeast-2 --profile aws_profile)', group: 'release') {
+    doLast {
+        exec {
+            workingDir project.projectDir
+            commandLine 'docker', 'push', "${project.ext.qaint_ecr_repo}:${project.ext.artifact_version}"
+        }
+    }
+}
+
+task tagStgDockerImage (description: 'Tag the mercury image', group: 'release') {
+    doLast {
+        exec {
+            workingDir project.projectDir
+            commandLine 'docker', 'tag', "${project.ext.eng_prod_ecr_repo}:${project.ext.artifact_version}", "${project.ext.stg_ecr_repo}:${project.ext.artifact_version}"
+        }
+    }
+}
+
+task releaseStgDockerImage (description: 'Pushes the mercury image onto ECR. If login required, eval $(aws ecr get-login --no-include-email --region ap-southeast-2 --profile aws_profile)', group: 'release') {
+    doLast {
+        exec {
+            workingDir project.projectDir
+            commandLine 'docker', 'push', "${project.ext.stg_ecr_repo}:${project.ext.artifact_version}"
+        }
+    }
+}
+
+task tagPpeDockerImage (description: 'Tag the mercury image', group: 'release') {
+    doLast {
+        exec {
+            workingDir project.projectDir
+            commandLine 'docker', 'tag', "${project.ext.eng_prod_ecr_repo}:${project.ext.artifact_version}", "${project.ext.ppe_ecr_repo}:${project.ext.artifact_version}"
+        }
+    }
+}
+
+task releasePpeDockerImage (description: 'Pushes the mercury image onto ECR. If login required, eval $(aws ecr get-login --no-include-email --region ap-southeast-2 --profile aws_profile)', group: 'release') {
+    doLast {
+        exec {
+            workingDir project.projectDir
+            commandLine 'docker', 'push', "${project.ext.ppe_ecr_repo}:${project.ext.artifact_version}"
+        }
+    }
+}
+
+
+task tagProdDockerImage (description: 'Builds the mercury image', group: 'release') {
+    doLast {
+        exec {
+            workingDir project.projectDir
+            commandLine 'docker', 'tag', "${project.ext.dev_ecr_repo}:${project.ext.artifact_version}", "${project.ext.prod_usw1_ecr_repo}:${project.ext.artifact_version}"
+        }
+    }
+}
+
+task releaseProdDockerImage (description: 'Pushes the mercury image onto ECR. If login required, eval $(aws ecr get-login --no-include-email --region us-west-1 --profile aws_profile)', group: 'release') {
+    doLast {
+        exec {
+            workingDir project.projectDir
+            commandLine 'docker', 'push', "${project.ext.prod_usw1_ecr_repo}:${project.ext.artifact_version}"
+        }
+    }
+}
+*/

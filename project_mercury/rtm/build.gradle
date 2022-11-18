@@ -1,0 +1,40 @@
+
+dependencies {
+    compile project(':asset')
+    compile project(':cache')
+    compile project(':dataevent')
+    compile project(':iam')
+    compile project(':config')
+    compile project(':courseware')
+    compile project(':graphql')
+    compile project(':sso')
+    compile project(':learning_analytics')
+    compile project(':export')
+    compile project(':ingestion')
+    compile project(':publication')
+    compile project(':pubsub')
+    compile project(':math')
+    compile project(':diffsync')
+
+
+    // Use Jetty Native WebSocket API, no requirement for container portability (ie, javax JSR356)
+    compile 'org.eclipse.jetty.websocket:websocket-api:9.4.14.v20181114'
+    compile 'org.eclipse.jetty.websocket:websocket-server:9.4.14.v20181114'
+
+    //
+    compile 'com.fasterxml.jackson.core:jackson-core:2.11.3'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.11.3'
+
+    //
+    testCompile project(':courseware').sourceSets.test.output
+    testCompile project(':iam').sourceSets.test.output
+}
+
+test {
+    useJUnitPlatform()
+    // add test configurations here
+    // see http://junit.org/junit5/docs/current/user-guide/#running-tests-build-gradle
+}
+
+// tasks to generate java files for message and handler
+apply from: 'generate.gradle'

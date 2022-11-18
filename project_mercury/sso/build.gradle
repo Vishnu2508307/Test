@@ -1,0 +1,17 @@
+
+dependencies {
+    compile project(':common')
+    compile project(':config')
+    compile project(':iam')
+
+    // OIDC
+    compile 'com.nimbusds:oauth2-oidc-sdk:8.26'
+    // LTI
+    compile 'javax.servlet:jstl:1.2'
+    compile 'javax.servlet:javax.servlet-api:4.0.1'
+    compile group: 'net.oauth.core', name: 'oauth-provider', version: '20100527'
+}
+
+test {
+    useJUnitPlatform()
+}

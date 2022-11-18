@@ -1,0 +1,1 @@
+DROP TABLE plugin.workspace_log_statements_by_plugin;

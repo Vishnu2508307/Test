@@ -1,0 +1,35 @@
+plugins {
+    id "application"
+}
+apply plugin : "java"
+
+repositories {
+    mavenCentral()
+}
+mainClassName = "com.smartsparrow.mercury.simulator.CitrusSimulator"
+
+configurations {
+    compile.exclude module: "spring-boot-starter-tomcat"
+}
+
+task simulator(type: JavaExec) {
+    group = "simulator"
+    description = "Run the main class with JavaExecTask"
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'com.smartsparrow.mercury.simulator.CitrusSimulator'
+}
+dependencies {
+    compile "org.springframework.boot:spring-boot-starter:2.0.9.RELEASE"
+    compile "org.springframework.boot:spring-boot-starter-web:2.0.9.RELEASE"
+    compile group: 'com.consol.citrus', name: 'citrus-simulator-ui', version: '1.1.0'
+    compile "org.javassist:javassist:3.27.0-GA"
+    compile group: 'org.springframework.boot', name: 'spring-boot-starter-jetty', version: '2.0.9.RELEASE'
+    compile group: 'com.consol.citrus', name: 'citrus-simulator-starter', version: '1.1.0'
+    testCompile 'junit:junit:4.13.1'
+    testCompile group: 'org.testng', name: 'testng', version: '7.3.0'
+}
+
+test {
+    useTestNG()
+    scanForTestClasses = false //this one
+}

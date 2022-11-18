@@ -1,0 +1,30 @@
+
+dependencies {
+    compile project(':common')
+    compile project(':iam')
+    compile project(':courseware')
+    compile project(':annotation')
+    compile project(':sso')
+    compile project(':pubsub')
+
+    //
+    compile 'javax.servlet:javax.servlet-api:4.0.1'
+    compile 'com.graphql-java-kickstart:graphql-java-servlet:11.1.1'
+    compile 'org.glassfish.jersey.core:jersey-server:2.32'
+    compile 'org.glassfish.jersey.core:jersey-common:2.32'
+    compile 'org.glassfish.jersey.containers:jersey-container-servlet:2.32'
+    compile 'org.glassfish.jersey.media:jersey-media-json-jackson:2.32'
+    compile 'org.glassfish.hk2:guice-bridge:2.6.1'
+    compile group: 'org.glassfish.jersey.media', name: 'jersey-media-multipart', version: '2.32'
+    compile group: 'org.glassfish.jersey.inject', name: 'jersey-hk2', version: '2.32'
+    compile group: 'com.fasterxml.jackson.jaxrs', name: 'jackson-jaxrs-json-provider', version: '2.11.3'
+
+    //
+    testCompile project(':iam').sourceSets.test.output
+    testCompile project(':courseware').sourceSets.test.output
+    testCompile project(':common').sourceSets.test.output
+}
+
+test {
+    useJUnitPlatform()
+}

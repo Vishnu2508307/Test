@@ -1,0 +1,358 @@
+import com.github.psxpaul.task.JavaExecFork
+import groovyx.gpars.GParsPool
+import net.masterthought.cucumber.Configuration
+import net.masterthought.cucumber.ReportBuilder
+import net.masterthought.cucumber.Reportable
+
+import java.util.function.Function
+import java.util.function.Predicate
+import java.util.stream.Collectors
+
+buildscript {
+    dependencies {
+        classpath "net.masterthought:cucumber-reporting:5.4.0"
+        classpath "org.codehaus.gpars:gpars:1.2.1"
+        //NOTE: there is a fresh version of this plugin (0.1.9) which should support passing systemProperties to ExecFork,
+        // but that version requires gradle 5.0.
+        classpath "gradle.plugin.com.github.psxpaul:gradle-execfork-plugin:0.1.13"
+    }
+}
+plugins {
+    id 'java'
+    id 'com.github.psxpaul.execfork' version '0.1.13'
+}
+ext {
+    citrusVersion = '2.8.0'
+    cucumberVersion = '3.0.2'
+
+    reportFolder = "${reporting.baseDir}/cucumber"
+    mercuryPort = 8081
+    simulatorPort= 9999
+    parallelAgents = System.getenv("PARALLEL_AGENTS") ?:"1"
+}
+
+dependencies {
+    compile project(':jetty')
+    compile project(':simulator')
+
+    testCompile "com.consol.citrus:citrus-core:${citrusVersion}"
+    testCompile "com.consol.citrus:citrus-java-dsl:${citrusVersion}"
+    testCompile "com.consol.citrus:citrus-cucumber:${citrusVersion}"
+    testCompile "com.consol.citrus:citrus-websocket:${citrusVersion}"
+    testCompile "com.consol.citrus:citrus-http:${citrusVersion}"
+    testCompile "com.consol.citrus:citrus-jms:${citrusVersion}"
+
+    testCompile "io.cucumber:cucumber-core:${cucumberVersion}"
+    testCompile "io.cucumber:cucumber-spring:${cucumberVersion}"
+    testCompile "io.cucumber:cucumber-junit:${cucumberVersion}"
+    testCompile "io.cucumber:cucumber-java:${cucumberVersion}"
+    // To use JUnit assertions in the step definitions:
+    testCompile 'junit:junit:4.13.1'
+
+    implementation "gradle.plugin.com.github.psxpaul:gradle-execfork-plugin:0.1.13"
+}
+
+test.enabled = false
+
+task classpathJar(dependsOn: [classes, testClasses], type: Jar, group: 'citrus') {
+    appendix 'classpathJar'
+    manifest {
+        doFirst {
+        // uri is just needed for Windows-compatibility
+        attributes 'Class-Path': (configurations.testCompile + sourceSets.main.output + sourceSets.test.output).files.collect {
+            project.uri(it)
+        }.join(' ')
+    }
+    }
+}
+
+task cleanReportFolder(group: 'citrus') {
+    doLast {
+        project.delete(reportFolder)
+        project.file(reportFolder).mkdirs()
+    }
+}
+
+// generate reports task for gitlab pipeline
+task generateReports(group: 'citrus') {
+    doLast {
+
+        def jsonReportFolder = new File("${reportFolder}")
+        List<String> jsonReportFilesName = Arrays.stream(jsonReportFolder.listFiles())
+            .map(new Function<File, String>() {
+                @Override
+                String apply(File file) {
+                    return file.absolutePath
+                }
+            })
+            .filter(new Predicate<String>() {
+                @Override
+                boolean test(String s) {
+                    return s.endsWith(".json")
+                }
+            })
+            .collect(Collectors.toList())
+
+        Configuration configuration = new Configuration(jsonReportFolder, "mercury");
+
+        ReportBuilder reportBuilder = new ReportBuilder(jsonReportFilesName, configuration);
+        Reportable result = reportBuilder.generateReports()
+
+        def header = '(_______) (_______|_____ (_)   (_) _____)  (_______|_______)/ _____|_______) _____)  (_____ \\(_______|_____ (_______|_____ (_______)\n' +
+                     ' _      | |   _    _____) )     ( (____        _    _____  ( (____     _  ( (____     _____) )_____   _____) )     _ _____) )  _    \n' +
+                     '| |     | |  | |  |  __  / |   | \\____ \\      | |  |  ___)  \\____ \\   | |  \\____ \\   |  __  /|  ___) |  ____/ |   | |  __  /  | |   \n' +
+                     '| |_____| |  | |  | |  \\ \\ |___| |____) )     | |  | |_____ _____) )  | |  _____) )  | |  \\ \\| |_____| |    | |___| | |  \\ \\  | |   \n' +
+                     ' \\______)_|  |_|  |_|   |_\\_____(______/      |_|  |_______|______/   |_| (______/   |_|   |_|_______)_|     \\_____/|_|   |_| |_|   '
+        println(header)
+        println('________________________________________________________________________________________________________________________________________________')
+
+        if (result != null) {
+            println("${result.features} features: " +
+                    "${result.passedFeatures} successes, " +
+                    "${result.failedFeatures} failures")
+            println("${result.scenarios} scenarios: " +
+                    "${result.passedScenarios} successes, " +
+                    "${result.failedScenarios} failures")
+            println("${result.steps} steps: " +
+                    "${result.passedSteps} successes, " +
+                    "${result.failedSteps} failures, " +
+                    "${result.skippedSteps} skipped, " +
+                    "${result.pendingSteps} pending")
+        }
+
+        println("\nFull report available on: ${reportFolder}/cucumber-html-reports/overview-features.html")
+    }
+}
+
+task generateReport(group: 'citrus') {
+    doLast {
+        def jsonReports = fileTree(dir: "${reportFolder}").include '**/*.json'.toString()
+        File reportOutputDirectory = new File("${reportFolder}");
+
+        List<String> jsonReportFiles = new ArrayList<String>();
+        jsonReports.each { File file ->
+            jsonReportFiles.add("${reportFolder}/${file.name}".toString());
+        }
+
+        Configuration configuration = new Configuration(reportOutputDirectory, "mercury");
+
+        ReportBuilder reportBuilder = new ReportBuilder(jsonReportFiles, configuration);
+        Reportable result = reportBuilder.generateReports()
+
+        println '-----------------------------------------'
+        println '|        INTEGRATION TESTS RESULT        |'
+        println '-----------------------------------------'
+        if (result != null) {
+            println("${result.features} features: " +
+                    "${result.passedFeatures} successes, " +
+                    "${result.failedFeatures} failures")
+            println("${result.scenarios} scenarios: " +
+                    "${result.passedScenarios} successes, " +
+                    "${result.failedScenarios} failures")
+            println("${result.steps} steps: " +
+                    "${result.passedSteps} successes, " +
+                    "${result.failedSteps} failures, " +
+                    "${result.skippedSteps} skipped, " +
+                    "${result.pendingSteps} pending")
+        }
+
+        println("\nFull report available on: ${reportFolder}/cucumber-html-reports/overview-features.html")
+    }
+}
+
+task runInParallel(group: 'citrus') {
+    dependsOn 'startMercury'
+    dependsOn 'startSimulator'
+    doLast {
+        def featureSet = 0
+        def features = testsToRun()
+                .collect()
+                .toList()
+                .sort()
+        def featureSplitByAgent = (features.size() / project.ext.parallelAgents.trim().toInteger()).toInteger()
+        def collateTests = features.collate(featureSplitByAgent)
+
+        if (project.hasProperty("featureSet")) {
+            featureSet = (project.featureSet.trim()).toInteger() - 1
+        }
+
+        if (featureSet > project.ext.parallelAgents.toInteger() ) {
+            throw new GradleException("-PfeatureSet is greater than number of agents! Doing so will result in some tests not executing!")
+        }
+
+        def tests = (files { collateTests[featureSet] }).getAsFileTree()
+
+        int numberOfThreads = project.properties.get("numberOfThreads", 6) as Integer
+        println("Parallel execution with numberOfThreads=${numberOfThreads}")
+
+        GParsPool.withPool(numberOfThreads) {
+            tests.eachParallel { File file ->
+                javaexec {
+                    main = "cucumber.api.cli.Main"
+                    classpath sourceSets.test.output + files(classpathJar.archivePath)
+                    args = ['--glue', 'mercury.glue', "${file.getAbsolutePath()}",
+                            '--plugin', "json:${reportFolder}/${file.name}.json",
+                            '--plugin', 'pretty']
+                    standardOutput new FileOutputStream("${buildDir}/logs/${file.name}.log")
+                    systemProperty "mercury.port", mercuryPort
+                    systemProperty 'skipJettyStart', 'true'
+                }
+
+                println("${file.name}: Scenario output: ${buildDir}/logs/${file.name}.log ")
+            }
+        }
+    }
+}
+// task to run features set in parallel on gitlab pipeline
+task runFeaturesSetInParallel(description: 'use -Pfeatures_set=feature_sets_file, -Pparallelism=number_of_threads', group: 'citrus', dependsOn: classpathJar) {
+    doLast {
+        // read the task arguments
+        String featuresSet = project.properties.get("features_set") as String;
+        int parallelism = project.properties.get("parallelism", 3) as Integer;
+
+        println("Preparing to run feature sets: "+ featuresSet)
+        println("fullPath: ${buildDir}/${featuresSet}")
+
+        if (featuresSet != null || !featuresSet.isEmpty()) {
+            // run in parallel
+            try {
+                // load the file and read each line
+                def featureSetFile = new File("${buildDir}/${featuresSet}")
+                def featureNameSet = featureSetFile.readLines();
+                // load each feature file
+                def featureFiles = featureNameSet.stream()
+                        .map(new Function<String, File>() {
+                            @Override
+                            File apply(String featureName) {
+                                return new File("${project.projectDir}/src/test/resources/${featureName}")
+                            }
+                        })
+                        .collect(Collectors.toList())
+
+                println("Parallel execution with numberOfThreads=${parallelism}")
+
+                // run each feature in parallel
+                GParsPool.withPool(parallelism) {
+                    featureFiles.eachParallel { File file ->
+                        javaexec {
+                            main = "cucumber.api.cli.Main"
+                            workingDir = System.getProperty('user.dir')
+                            classpath sourceSets.test.output + files(classpathJar.archivePath)
+                            args = ['--glue', 'mercury.glue', "${file.getAbsolutePath()}",
+                                    '--plugin', "json:${reportFolder}/${file.name}.json",
+                                    '--plugin', 'pretty']
+                            standardOutput new FileOutputStream("${buildDir}/logs/${file.name}.log")
+                            systemProperty "mercury.port", 8080
+                            systemProperty 'skipJettyStart', 'true'
+                        }
+
+                        println("${file.name}: Scenario output: ${buildDir}/logs/${file.name}.log ")
+                    }
+                }
+            } catch (Throwable t) {
+                println(t.getStackTrace())
+                println('Error running feature set: ' + t.getCause())
+                throw new GradleException("error running the citrus tests. Check logs for more details")
+            }
+        }
+    }
+}
+
+task startMercury(dependsOn: classpathJar, type: JavaExecFork, group: 'citrus') {
+    classpath = sourceSets.test.output + files(classpathJar.archivePath)
+    main = 'com.smartsparrow.mercury.Bootstrap'
+    workingDir = System.getProperty('user.dir')
+    standardOutput = "${buildDir}/logs/mercury.log"
+    errorOutput = "${buildDir}/logs/mercury-error.log"
+    waitForPort = mercuryPort
+    waitForOutput = 'Started'
+    timeout = 120
+    stopAfter = runInParallel
+    jvmArgs = passSystemProperties(["-Dmercury.port=${mercuryPort}"])
+}
+
+task startSimulator(dependsOn: classpathJar, type: JavaExecFork, group: 'citrus') {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'com.smartsparrow.mercury.simulator.CitrusSimulator'
+    workingDir = System.getProperty('user.dir')
+    standardOutput = "${buildDir}/logs/simulator.log"
+    errorOutput = "${buildDir}/logs/simulator-error.log"
+    waitForPort = simulatorPort
+    waitForOutput = 'started'
+    timeout = 60
+    stopAfter = runInParallel
+}
+
+runInParallel.dependsOn startMercury
+runInParallel.finalizedBy generateReport
+
+def arguments = {
+    def args = ["-p", "pretty", "-p", "json:${reportFolder}/cucumber.json", "--glue", "mercury.glue"]
+    args.addAll testsToRun()
+    return args
+}
+
+task runInSequence(dependsOn: classpathJar, type: JavaExec, group: 'citrus') {
+    main = "cucumber.api.cli.Main"
+    classpath = sourceSets.test.output + files(classpathJar.archivePath)
+    args = arguments()
+    workingDir = System.getProperty('user.dir')
+    systemProperties = System.properties
+    systemProperty "mercury.port", mercuryPort
+    finalizedBy generateReport
+}
+
+task integrationTest(description: 'Runs the citrus tests; use -Ptests=test_name1,test_name2 to run specific tests, ' +
+        '-Pparallel to run in parallel, -PnumberOfThreads to run with specific parallelism level', group: 'citrus') {
+
+    if (project.hasProperty('parallel')) {
+        dependsOn cleanReportFolder, runInParallel
+    } else {
+        dependsOn cleanReportFolder, runInSequence
+    }
+}
+
+def testsToRun() {
+    def featuresTree = fileTree(dir: "${project.projectDir}/src/test/resources/mercury/")
+    if (project.hasProperty("tests")) {
+        def testsToRun = project.properties.get("tests")
+        def featuresToRun = []
+        if (testsToRun == null || testsToRun == "") {
+            throw new GradleException("No argument was provided for property 'tests'. Usage: -Ptests=test_name")
+        }
+        testsToRun.tokenize(',').each {
+            if (it.endsWith('.feature')) {
+                featuresToRun.add(it)
+            } else {
+                featuresToRun.add(it + '/')
+            }
+        }
+        return featuresTree.include(featuresToRun) //return only features which was passed via 'tests' parameter
+    } else {
+        return featuresTree //return all features
+    }
+}
+
+def static passSystemProperties(list) {
+    // JavaExecFork from `com.github.psxpaul.execfork` doesn't support passing system properties
+    //so need to pass them one by one
+    //UPDATE: we can remove this method if we update the plugin version - see comment at the top of the file
+    def keys = System.getProperties().keySet().findAll {
+        it.startsWith('cassandra.') || it.equals('env.region')
+    }
+
+    keys.each {
+        list.add("-D${it}=${System.properties[it]}")
+    }
+
+    return list
+}
+
+// create a artifact of tests.
+task testJar(type: Jar) {
+    classifier = 'tests'
+    from sourceSets.test.runtimeClasspath
+    // FIXME: this could include the classpath; instead we expand it later
+}
+// after assemble, run the testJar task.
+assemble.finalizedBy testJar

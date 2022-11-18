@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Error page</title>
+</head>
+<body>
+
+    <h3>An Error occurred.</h3>
+    <p>Error: <span id="error"></span></p>
+    <p>Reason: <span id="reason"></span></p>
+
+    <!--The following script includes the common variable globally-->
+    <script type="text/javascript" src="/js/common.js"></script>
+    <script>
+        // display the bearer token
+        common.addText("error", common.getParameterByName('error'));
+        common.addText("reason", common.getParameterByName('reason'));
+        // remove the token from the url query params
+        common.removeQueryParams();
+    </script>
+</body>
+</html>

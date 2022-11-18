@@ -1,0 +1,17 @@
+dependencies {
+
+    compile project(':common')
+
+    compile 'org.apache.camel:camel-core:2.25.1'
+    compile 'org.apache.camel:camel-guice:2.25.1'
+    compile 'org.apache.camel:camel-http:2.25.1'
+    compile 'org.apache.camel:camel-reactive-streams:2.25.1'
+    compile 'org.apache.camel:camel-aws:2.25.1'
+    compile 'org.apache.camel:camel-jackson:2.25.1'
+
+    testCompile 'org.apache.camel:camel-test:2.25.1'
+}
+
+test {
+    useJUnitPlatform()
+}

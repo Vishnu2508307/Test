@@ -1,0 +1,17 @@
+
+dependencies {
+
+    compile project(':dse')
+    compile project(':common')
+    compile project(':config')
+    compile project(':dataevent')
+    compile project(':iam')
+    compile project(':courseware')
+
+    testCompile group: 'junit', name: 'junit', version: '4.13.1'
+    testCompile 'org.apache.camel:camel-test:2.23.1'
+}
+
+test {
+    useJUnitPlatform()
+}

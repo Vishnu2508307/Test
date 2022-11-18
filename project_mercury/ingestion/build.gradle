@@ -1,0 +1,14 @@
+dependencies {
+
+    compile project(':amazon')
+    compile project(':dse')
+    compile project(':common')
+    compile project(':config')
+    compile project(':dataevent')
+    compile project(':iam')
+    compile project(':pubsub')
+}
+
+test {
+    useJUnitPlatform()
+}

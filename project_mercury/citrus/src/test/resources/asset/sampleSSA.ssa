@@ -1,0 +1,17 @@
+[Script Info]
+Title: <untitled>
+ScriptType: v4.00+
+Collisions: Normal
+PlayDepth: 0
+
+[v4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,20,&H00FFFFFF,&H000080FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,20,0
+
+[Events]
+Format: Layer, Start, End, Style, Actor, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.187,0:00:02.958,Default,,0,0,0,,(airplane jet engine)
+Dialogue: 0,0:00:02.958,0:00:07.474,Default,,0,0,0,,(bright music plays)
+Dialogue: 0,0:00:09.474,0:00:11.120,Default,,0,0,0,,- Really just stumbled\Non them through a website
+
+

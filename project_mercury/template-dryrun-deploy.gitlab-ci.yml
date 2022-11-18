@@ -1,0 +1,79 @@
+#
+# This file represents the pipeline template for deploying mercury
+#
+stages:
+  - dryrun
+
+include:
+  - project: 'pearsontechnology/gpt/bronte/pipeline/bronte-pipeline-template'
+    file: '/workflow-default.gitlab-ci.yml'
+
+#
+# Runs a terraform plan for the workspace and learner clusters
+#
+dryrun:terraform:changes:
+  stage: dryrun
+  tags:
+    - VAR_TERRAFORM_RUNNER
+  interruptible: true
+  script:
+    - set -e
+    - cd terraform
+    - make mercury ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=plan
+  when: on_success
+
+#
+# Runs a terraform plan for the workspace and learner clusters
+#
+dryrun:terraform-legacy:changes:
+  stage: dryrun
+  tags:
+    - VAR_TERRAFORM_LEGACY_RUNNER
+  interruptible: true
+  script:
+    - set -e
+    - cd terraform-legacy
+    - make cache           ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=plan
+    - make mercury         ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=plan
+    - make ext-http        ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=plan
+    - make ambrosia-export ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=plan
+    - make ingestion       ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=plan
+    - make asset           ENV=VAR_ENV REGION=VAR_REGION RELEASE_VERSION=VAR_CURRENT_VERSION ACTION=plan
+  when: on_success
+
+#
+# Tests connectivity to cassandra endpoints
+#
+dryrun:cassandra:connection:
+  stage: dryrun
+  tags:
+    - VAR_CQLSH_RUNNER
+  interruptible: true
+  script:
+    - set -e
+    - echo -e "[ssl]\nversion = SSLv23\n[cql]\nversion = 3.4.4\n[connection]\nfactory = cqlshlib.ssl.ssl_transport_factory\n" > cqlshrc.cfg
+    - 'aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:VAR_REGION:VAR_ACCOUNT_ID:secret:/VAR_ENV/aero/bastion/ssh_key" --region VAR_REGION --query "SecretString" --output text > gateway.pem'
+    - chmod 0400 gateway.pem
+    - export SSL_CERTFILE=etc/tls/dse/VAR_ENV/cassandra.pem
+    - |
+      ssh -4 -o StrictHostKeyChecking=no -i gateway.pem -f -L 9042:VAR_CASSANDRA_ENDPOINT:9042 pcm_user@VAR_CASSANDRA_GATEWAY sleep 30 &
+      cqlsh --debug --ssl --cqlshrc=cqlshrc.cfg -u cassandra -p cassandra --connect-timeout=10 127.0.0.1 9042 -e 'describe keyspaces;'
+    - rm -f gateway.pem
+  when: on_success
+
+#
+# Runs an output from schema changes
+#
+dryrun:schema:changes:
+  stage: dryrun
+  tags:
+    - VAR_OPENJDK_RUNNER
+  interruptible: true
+  script:
+    - set -e
+    - 'aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:VAR_REGION:VAR_ACCOUNT_ID:secret:/VAR_ENV/aero/bastion/ssh_key" --region VAR_REGION --query "SecretString" --output text > gateway.pem'
+    - 'CASSANDRA_TRUSTSTORE_PASSWORD=$(aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:VAR_REGION:VAR_ACCOUNT_ID:secret:/VAR_ENV/aero/mercury/cassandra/truststore_password" --region VAR_REGION --query "SecretString" --output text) CURRENT_VERSION=VAR_CURRENT_VERSION CASSANDRA_ENDPOINT_IP=VAR_CASSANDRA_ENDPOINT CASSANDRA_GATEWAY=VAR_CASSANDRA_GATEWAY CASSANDRA_GATEWAY_KEY=${PWD}/gateway.pem ./gradlew schemas:outputSchemaChanges -Penvironment=VAR_ENV -Dorg.gradle.daemon=false | tee -a schema_changes.cql'
+    - if [[ -f schema_changes.cql && -s schema_changes.cql ]]; then cat schema_changes.cql; else echo "No changes."; fi
+    - unset CASSANDRA_TRUSTSTORE_PASSWORD
+    - rm -f gateway.pem
+  when: on_success

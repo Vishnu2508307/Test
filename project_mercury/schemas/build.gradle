@@ -1,0 +1,159 @@
+buildscript {
+    //we have to duplicate dependencies from schemas_cassandra.gradle to avoid errors in IntelliJ IDEA
+    dependencies {
+        classpath 'com.datastax.cassandra:cassandra-driver-core:3.6.0'
+        classpath 'io.netty:netty-tcnative-boringssl-static:2.0.34.Final'
+        classpath 'org.yaml:snakeyaml:1.27'
+    }
+}
+
+plugins {
+    id 'org.hidetake.ssh' version '2.10.1'
+}
+
+// specific schema mgmt tasks
+apply from: 'schemas_cassandra.gradle'
+
+
+// probably doesnt handle lists
+def overrideFromCommandLine(object) {
+    overrideFromCommandLineRecursive(object, "")
+}
+def overrideFromCommandLineRecursive(object, path) {
+    object.each{ key, value -> 
+        def fullPath="${path}${key}"
+        if (value in Map) {
+            overrideFromCommandLineRecursive(value, fullPath + ".")
+        } else {
+            if( project.hasProperty(fullPath) ) {
+                logger.debug("Overriding configuration ${fullPath} with " + project.getProperty(fullPath))
+                object[key] = project.getProperty(fullPath)
+            }
+        }
+    }
+}
+
+
+// read in the specific environment configuration.
+def readEnvConfig() {
+    // already read config?
+    if( project.hasProperty('envConfig') ) {
+        return
+    }
+
+    if(!project.hasProperty('environment')) {
+        throw new InvalidUserDataException("missing required parameter 'environment'")
+    }
+    logger.info("Using environment settings: $environment")
+
+    ext {
+        envConfig = new ConfigSlurper(environment).parse( file('config.groovy').toURL() )
+        envName = environment
+    }
+
+    // set ssh defaults here to create the complete ssh config object hierarchy
+    if( envConfig.isSet('ssh') ) {
+        envConfig.ssh.user = envConfig.ssh.user ?: 'ubuntu'
+        envConfig.ssh.identity = envConfig.ssh.identity ?: (System.getenv("CASSANDRA_GATEWAY_KEY") ?:"${System.getProperty('user.home')}/.ssh/id_rsa")
+    
+        if (! envConfig.ssh.isSet("localPortForward")) {
+            envConfig.ssh.localPortForward = [:]
+        }
+    
+        if (! envConfig.ssh.localPortForward.hasProperty("localPortForward")) {
+            envConfig.ssh.localPortForward.localPort = 9042
+        }
+    
+        if (! envConfig.ssh.localPortForward.hasProperty("remotePort") ) {
+            envConfig.ssh.localPortForward.remotePort = 9042
+        }
+
+        // 
+        if (! envConfig.ssh.localPortForward.hasProperty("remoteHost") ) {
+            logger.info("Setting remoteHost to ${envConfig.cassandra.contactPoint} and envConfig.cassandra.contactPoint to localhost")
+            envConfig.ssh.localPortForward.remoteHost = envConfig.cassandra.contactPoint
+            envConfig.cassandra.contactPoint = 'localhost'
+        }
+    }
+
+    overrideFromCommandLine(envConfig);
+
+    // to allow direct connections for uat we have to be able to override ssh connections from the commandline
+    // useSsh can be a string or a boolean
+    if ( envConfig.isSet("ssh") && envConfig.ssh.isSet("useSsh") && envConfig.ssh.useSsh.toString().equalsIgnoreCase("false")) {
+      logger.warn("Configuration was set to _not_ use ssh tunneling")
+      envConfig.remove("ssh")
+    }
+
+    // debug info.
+    def sw = new StringWriter()
+    envConfig.writeTo(sw)
+    logger.info("""using settings: \
+---- envConfig start ---- 
+${sw.toString()} 
+---- envConfig end ----""")
+}
+
+
+// check if a property exists, fail if not.
+ext.checkProjectProperty = { name, eg ->
+    if(!project.hasProperty(name)) {
+        throw new InvalidUserDataException("missing required project parameter; needs -P${name}=${eg}")
+    }
+}
+
+
+// run a closure while keeping an ssl tunnel open.
+ext.wrapInSSHTunnelAsNeeded = { cfg, closure ->
+    // is an ssh stanza configured?
+    if( cfg.isSet('ssh') ) {
+        logger.info("envConfig has ssh stanza, building ssh tunnel")
+
+        // setup the tunnel
+        remotes.create('tunnel') {
+            host = cfg.ssh.host
+            user = cfg.ssh.user
+            identity = file(cfg.ssh.identity)
+        }
+
+        ssh.settings {
+            knownHosts = allowAnyHosts
+        }
+
+        // run closure inside tunnel scope.
+        ssh.run {
+            session(remotes.tunnel) {
+                def l = cfg.ssh.localPortForward
+                logger.lifecycle("remotes tunnel ${remotes.tunnel.user}@${remotes.tunnel.host}")
+                logger.lifecycle("creating ssh local port forward ${l.localPort}:${l.remoteHost}:${l.remotePort}")
+                forwardLocalPort port: l.localPort, host: l.remoteHost, hostPort: l.remotePort
+                closure.call()
+            }
+        }
+
+    } else {
+        // no ssh envConfig specified, just run closure.
+        closure.call()
+    }
+}
+
+
+
+/**
+ * Tasks to run all other relevant tasks
+ */
+def GROUP_SCHEMA = 'Schema Management - All'
+
+//
+task applySchemaChanges( description: 'Apply all schema changes; use -Penvironment=env_name',
+                         group: GROUP_SCHEMA ) {
+    // do nothing, just a marker to run other task deps.
+}
+applySchemaChanges.dependsOn { applyCassandraMutations }
+
+//
+task outputSchemaChanges( description: 'Output all schema changes; use -Penvironment=env_name',
+                         group: GROUP_SCHEMA ) {
+    // do nothing, just a marker to run other task deps.
+}
+outputSchemaChanges.dependsOn { outputCassandraMutations }

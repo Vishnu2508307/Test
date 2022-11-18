@@ -1,0 +1,63 @@
+version: '2.4'
+
+networks:
+  aero_local:
+    driver: bridge
+    driver_opts:
+# Enable/Disable internet access from inside the network
+      "com.docker.network.bridge.enable_ip_masquerade": "true"
+    ipam:
+      config:
+        - subnet: 192.168.192.0/24
+
+# OSX requires port forwarding
+services:
+  redis:
+    image: redis:4.0.10
+    ports:
+      - 192.168.192.168:6379:6379
+    networks:
+      aero_local:
+        ipv4_address: 192.168.192.168
+    environment:
+      - REDIS_PASSWORD=aelpredis
+    command: sh -c "redis-server --requirepass $${REDIS_PASSWORD}"
+
+  cassandra_seed:
+    image: registry.gitlab.com/pearsontechnology/gpt/aero/aero-service-mercury/db:LATEST
+    ports:
+      - 192.168.192.201:9042:9042
+    networks:
+      aero_local:
+        ipv4_address: 192.168.192.201
+    environment:
+      - ENVIRONMENT=local
+      - CASSANDRA_DC=Cassandra
+      - CASSANDRA_BROADCAST_ADDRESS=192.168.192.201
+    volumes:
+      - ./etc/tls/dse/local:/etc/cassandra/keystore
+# Persist the cassandra db changes onto a docker volume named "seed_data"
+      - seed_data:/var/lib/cassandra
+    command: bin/bash -c "/import_keystore.sh && /docker-entrypoint.sh -Dcassandra.consistent.rangemovement=false"
+
+  cassandra_node1:
+    image: registry.gitlab.com/pearsontechnology/gpt/aero/aero-service-mercury/db:LATEST
+    ports:
+      - 192.168.192.202:9042:9042
+    networks:
+      aero_local:
+        ipv4_address: 192.168.192.202
+    environment:
+      - ENVIRONMENT=local
+      - CASSANDRA_DC=Analytics
+      - CASSANDRA_BROADCAST_ADDRESS=192.168.192.202
+      - CASSANDRA_SEEDS=192.168.192.201
+    volumes:
+      - ./etc/tls/dse/local:/etc/cassandra/keystore
+# Persist the cassandra db changes onto a docker volume named "node1_data"
+      - node1_data:/var/lib/cassandra
+    command: bin/bash -c "/import_keystore.sh && /docker-entrypoint.sh -Dcassandra.consistent.rangemovement=false"
+
+volumes:
+  seed_data:
+  node1_data:

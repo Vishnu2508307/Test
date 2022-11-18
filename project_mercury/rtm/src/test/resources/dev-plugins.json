@@ -1,0 +1,350 @@
+[
+  {
+    "name": "Text Input",
+    "pluginId": "7c767580-575b-11ea-8ed8-ff18d76b3e83",
+    "version": "0.4.7",
+    "hash": "53462f8ae3340f9c2d3245a3c9a5dd11"
+  },
+  {
+    "name": "MCQ",
+    "pluginId": "75d64ac0-575b-11ea-8ed8-ff18d76b3e83",
+    "version": "0.4.7",
+    "hash": "d48f13cb22b95dce508c9a0d05586506"
+  },
+  {
+    "name": "Screen",
+    "pluginId": "5769bf90-575b-11ea-8ed8-ff18d76b3e83",
+    "version": "0.8.21",
+    "hash": "cf65f440d574cd2aeb12ad61683159fa"
+  },
+  {
+    "name": "Slideshow Lesson",
+    "pluginId": "b05c7060-581f-11ea-8ed8-ff18d76b3e83",
+    "version": "0.0.3",
+    "hash": "e2529d48f7440bd6f260947e89392cb0"
+  },
+  {
+    "name": "Case Study Viewer",
+    "pluginId": "b2ac1040-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.2.1",
+    "hash": "b9a3981154d58527947b3c8dcf4366c6"
+  },
+  {
+    "name": "Hub & Spoke Lesson",
+    "pluginId": "822ea6a0-581e-11ea-a092-c33a1779404d",
+    "version": "0.1.13",
+    "hash": "f5c844632680308012064063773daf61"
+  },
+  {
+    "name": "Embeddable Lesson",
+    "pluginId": "c92798a0-581e-11ea-8ed8-ff18d76b3e83",
+    "version": "0.1.13",
+    "hash": "859531b15963297cef08e8a75f2f157c"
+  },
+  {
+    "name": "Stiched Lesson",
+    "pluginId": "b2a1d710-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.0.31",
+    "hash": "ba7360bd13cec9f3f6a478c0d56e8bbe"
+  },
+  {
+    "name": "Number slider",
+    "pluginId": "7fdd0060-581c-11ea-8ed8-ff18d76b3e83",
+    "version": "0.4.7",
+    "hash": "8fdd0d7fb748104156c5899cc9f37a8f"
+  },
+  {
+    "name": "Number Input",
+    "pluginId": "50575250-581c-11ea-8ed8-ff18d76b3e83",
+    "version": "0.4.7",
+    "hash": "4ab68c6ad22cb23bce3bfcc7d84fb854"
+  },
+  {
+    "name": "Drop in the Blanks",
+    "pluginId": "b2a8dbf0-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.3.4",
+    "hash": "aecf4458ffc984280fdf5641d1c90ce4"
+  },
+  {
+    "name": "Astro Degree",
+    "pluginId": "9e6ca720-5820-11ea-a092-c33a1779404d",
+    "version": "0.1.46",
+    "hash": "32132317d9e49b23dd108dea078cf25e"
+  },
+  {
+    "name": "Carousel Widget",
+    "pluginId": "b29e54a0-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.3.2",
+    "hash": "a5fe76c235e1a9793f73ec9d35272d50"
+  },
+  {
+    "name": "Input Table Component",
+    "pluginId": "b2a384c0-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.4.1",
+    "hash": "1f444cdd9b847a5e2254fdbeffc91fdc"
+  },
+  {
+    "name": "Simple Unit",
+    "pluginId": "b2b29ff0-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "1.0.1",
+    "hash": "52df9caa8a4816b371584eaa59d2ad04"
+  },
+  {
+    "name": "Dropdown",
+    "pluginId": "e1715150-581c-11ea-837f-75254d42d681",
+    "version": "0.4.7",
+    "hash": "0f130f00f66bd28e5a60302f235c7eb7"
+  },
+  {
+    "name": "Image Select",
+    "pluginId": "fab1e5c0-581d-11ea-837f-75254d42d681",
+    "version": "0.4.7",
+    "hash": "1476dc01388fbbbbfc71188f544d89db"
+  },
+  {
+    "name": "Flashcard Widget",
+    "pluginId": "b2a02960-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.2.6",
+    "hash": "060e4a9e2f279ea146dd72ad9a8c1912"
+  },
+  {
+    "name": "YouTube video player",
+    "pluginId": "b2b5fb50-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.2.6",
+    "hash": "53a653334e799fba9f16f545bf1d720b"
+  },
+  {
+    "name": "Standard Lesson",
+    "pluginId": "3180f6e0-581e-11ea-a092-c33a1779404d",
+    "version": "1.0.5",
+    "hash": "c2e2b7cdb0a6fc6c7edc9fd17b1ad068"
+  },
+  {
+    "name": "Text Area",
+    "pluginId": "6eac0870-575b-11ea-8ed8-ff18d76b3e83",
+    "version": "0.4.7",
+    "hash": "7873cd08fa791e06b906210549171a77"
+  },
+  {
+    "name": "Line chart",
+    "pluginId": "b2bb5280-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.0.15",
+    "hash": "45ed379102c5e3331191c931be6fa77c"
+  },
+  {
+    "name": "HTML Component",
+    "pluginId": "b2c6eb40-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "1.0.1",
+    "hash": "8eb73745c963a39ab2b7e5561de5c79c"
+  },
+  {
+    "name": "Audio Player",
+    "pluginId": "35362230-63fc-11ea-9584-ebed576608cf",
+    "version": "0.3.9",
+    "hash": "3fb59864f2173f14f935557598a60618"
+  },
+  {
+    "name": "Reef Unit",
+    "pluginId": "b2af6ba0-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "1.0.2",
+    "hash": "d84253a7d109c7ab4bfb1e1df04cf72c"
+  },
+  {
+    "name": "Scatter chart",
+    "pluginId": "b2c05b90-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.0.15",
+    "hash": "0d3f955b9debe62dbadbcb3f7f5e66a1"
+  },
+  {
+    "name": "Chemical SMILES Renderer",
+    "pluginId": "b2d08830-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "1.0.0",
+    "hash": "0e280925cf11f70b54fe7a97a9f1b9d7"
+  },
+  {
+    "name": "Fill in the blanks",
+    "pluginId": "bf29b560-843b-11ea-b84b-8b9525bedeae",
+    "version": "0.10.1",
+    "hash": "4ba3b301e66ceab4b926d5fca6c57d11"
+  },
+  {
+    "name": "3D Screen",
+    "pluginId": "b2b0f240-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.0.72",
+    "hash": "7cb7aef92fff2abb1dbe9a9cea41a30f"
+  },
+  {
+    "name": "Action Button",
+    "pluginId": "220b7dc0-6caa-11ea-9406-c33b9a7a5e77",
+    "version": "0.4.158",
+    "hash": "0c0c933e11a6f10c4a2f97372e9e6821"
+  },
+  {
+    "name": "Pearson Course",
+    "pluginId": "b2c38fe0-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.0.51",
+    "hash": "f25679c1e8ced20b5cf096e692f5448b"
+  },
+  {
+    "name": "Area chart",
+    "pluginId": "b2bd0030-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.0.15",
+    "hash": "f4e494f779176d2d2b0b3d133e9f6b33"
+  },
+  {
+    "name": "Simple Table",
+    "pluginId": "a7378e90-7f87-11ea-9094-13c48db577ae",
+    "version": "0.1.7",
+    "hash": "460b33fab0059318bb5ec346c136f3d3"
+  },
+  {
+    "name": "Reef Theme",
+    "pluginId": "b2ade500-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "1.0.2",
+    "hash": "c35e2a845d40a38c2c43b277410d9bb7"
+  },
+  {
+    "name": "Pie chart",
+    "pluginId": "b2beade0-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.0.15",
+    "hash": "bcbe7fc506d0751ceaf2a3af0183525d"
+  },
+  {
+    "name": "Test Procedure Screen",
+    "pluginId": "237393f0-6e44-11ea-9eaa-8d17577b1ead",
+    "version": "0.0.6",
+    "hash": "6fc2a0920642a766643d5f17ae867077"
+  },
+  {
+    "name": "Order List",
+    "pluginId": "b29b2050-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.5.3",
+    "hash": "0064cee00f14bbfb9417668367800c22"
+  },
+  {
+    "name": "MCQ",
+    "pluginId": "a325bf70-6d76-11ea-8c12-fb04008554b5",
+    "version": "0.0.5",
+    "hash": "babc6175c036d504ae156801ac8854c7"
+  },
+  {
+    "name": "Navigator",
+    "pluginId": "b2c9f880-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.1.39",
+    "hash": "fea902ee977bc3b98d1927c3268155e9"
+  },
+  {
+    "name": "Native Player",
+    "pluginId": "b2b81e30-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.0.103",
+    "hash": "ebfc36b1e734db17f92ef4a5ada5a18a"
+  },
+  {
+    "name": "Simple Course",
+    "pluginId": "609aeae0-575a-11ea-837f-75254d42d681",
+    "version": "0.5.1",
+    "hash": "273fd17ad27cb999f830eac9aa5c24a1"
+  },
+  {
+    "name": "WIP Stitched Lesson",
+    "pluginId": "bfe50a60-6e27-11ea-9eaa-8d17577b1ead",
+    "version": "0.0.44",
+    "hash": "a45b374601a32c962e911e6c6065c7f0"
+  },
+  {
+    "name": "iFrame",
+    "pluginId": "9e6999e0-5820-11ea-a092-c33a1779404d",
+    "version": "0.1.1",
+    "hash": "708fa49c85c117a4bdd201680e290663"
+  },
+  {
+    "name": "Competency Summary",
+    "pluginId": "b2cb7f20-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.0.1",
+    "hash": "3cb7371cc3ee0f94d4d634de5cf7b4dd"
+  },
+  {
+    "name": "Pearson Lesson",
+    "pluginId": "b2c20940-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.0.51",
+    "hash": "2a9575fc33203f93dfd4dabd0adcee14"
+  },
+  {
+    "name": "Test Standard Lesson",
+    "pluginId": "b2ceda80-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.0.3",
+    "hash": "aee994b87c0283031775181b0c7cdb76"
+  },
+  {
+    "name": "Advanced Procedure Screen",
+    "pluginId": "8d39e980-697e-11ea-aca3-0b4d3bc930d5",
+    "version": "0.1.0",
+    "hash": "96832174dc4d501fec2cb00f202ecf5c"
+  },
+  {
+    "name": "Test course",
+    "pluginId": "4894bf30-58ee-11ea-837f-75254d42d681",
+    "version": "0.0.10",
+    "hash": "a1f527615ae13a01ebdff88764c99256"
+  },
+  {
+    "name": "Vimeo Player",
+    "pluginId": "b2b474b0-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.2.8",
+    "hash": "8f2c1d4cbd44ad5995f07ea71b36547e"
+  },
+  {
+    "name": "Voice Recorder",
+    "pluginId": "b2a70730-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.2.3",
+    "hash": "324ac951240f21e4722c0e2b747653b3"
+  },
+  {
+    "name": "Wiris Math Editor",
+    "pluginId": "b2c871e0-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.1.0",
+    "hash": "efda55bc626998fce920447f948de602"
+  },
+  {
+    "name": "Rich Text Editor",
+    "pluginId": "b2a53270-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.2.6",
+    "hash": "adb8b15d948f3e86c559ed5c8741217c"
+  },
+  {
+    "name": "Cover Screen",
+    "pluginId": "7be655b0-697e-11ea-aca3-0b4d3bc930d5",
+    "version": "0.0.13",
+    "hash": "08fdc08a364df8d6de74d4f726c0b960"
+  },
+  {
+    "name": "External Resource Button",
+    "pluginId": "62ceedb0-6caa-11ea-9406-c33b9a7a5e77",
+    "version": "0.4.158",
+    "hash": "1612ad7611cc32d0e9c2faeeaf560493"
+  },
+  {
+    "name": "Astro Course",
+    "pluginId": "b2cd2cd0-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.1.46",
+    "hash": "46e20adc82be578c85e98e3ed680c46c"
+  },
+  {
+    "name": "Courseware Button",
+    "pluginId": "57ea1460-6caa-11ea-9406-c33b9a7a5e77",
+    "version": "0.4.158",
+    "hash": "93958e150f8f53100e60f2e098cfbbd8"
+  },
+  {
+    "name": "Grouping",
+    "pluginId": "abc59110-843b-11ea-b84b-8b9525bedeae",
+    "version": "0.8.2",
+    "hash": "a86001ad6aa49657936e52cc7b9efdb8"
+  },
+  {
+    "name": "Bar chart",
+    "pluginId": "b2b9cbe0-5820-11ea-8ed8-ff18d76b3e83",
+    "version": "0.0.15",
+    "hash": "e567c512fead304f3b7be56dadaa3f9e"
+  }
+]

@@ -1,0 +1,12 @@
+.gradle/
+*.idea
+*.iml
+out/
+tmp/
+etc/tls/dse/local/cassandra.p12
+etc/tls/dse/local/cassandra.pem
+citrus/test-output
+**.terraform
+**.creds
+.DS_Store
+*/build/

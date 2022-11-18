@@ -1,0 +1,28 @@
+
+dependencies {
+    compile project(':cache')
+    compile project(':common')
+    compile project(':dataevent')
+    compile project(':dse')
+    compile project(':config')
+
+    // for exposing the Servlet Authentication filter.
+    compile 'javax.servlet:javax.servlet-api:4.0.1'
+
+    // Blackborad LTI classes - To be replaced with own implementation
+    //compile ('blti-sandwich:blti-sandwich:1.1-02') {
+    compile ('blackboard.bbdn.ims:blti-sandwich:1.1') {
+        exclude group: 'xerces'
+        exclude group: 'xalan' // Old 2.5 transitive here breaks Camel
+    }
+
+    // Same as dataevents
+    testCompile 'org.apache.camel:camel-test:2.23.1'
+
+    compile 'com.pearson.autobahn:autobahn-producer-sdk:6.0.2'
+
+}
+
+test {
+    useJUnitPlatform()
+}

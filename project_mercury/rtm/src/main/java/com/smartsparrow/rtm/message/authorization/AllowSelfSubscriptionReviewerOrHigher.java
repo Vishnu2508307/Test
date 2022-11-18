@@ -1,0 +1,38 @@
+package com.smartsparrow.rtm.message.authorization;
+
+import javax.inject.Inject;
+
+import com.smartsparrow.iam.service.Account;
+import com.smartsparrow.iam.service.AuthenticationContext;
+import com.smartsparrow.iam.service.PermissionLevel;
+import com.smartsparrow.iam.service.SubscriptionPermissionService;
+import com.smartsparrow.rtm.message.AuthorizationPredicate;
+import com.smartsparrow.rtm.message.ReceivedMessage;
+
+public class AllowSelfSubscriptionReviewerOrHigher implements AuthorizationPredicate<ReceivedMessage> {
+
+    private final SubscriptionPermissionService subscriptionPermissionService;
+
+    @Inject
+    public AllowSelfSubscriptionReviewerOrHigher(SubscriptionPermissionService subscriptionPermissionService) {
+        this.subscriptionPermissionService = subscriptionPermissionService;
+    }
+
+    @Override
+    public String getErrorMessage() {
+        return "Unauthorized permission level";
+    }
+
+    @Override
+    public boolean test(AuthenticationContext authenticationContext, ReceivedMessage receivedMessage) {
+        Account account = authenticationContext.getAccount();
+
+        if (account != null) {
+            PermissionLevel permission = subscriptionPermissionService
+                    .findHighestPermissionLevel(account.getId(), account.getSubscriptionId()).block();
+
+            return permission != null && permission.isEqualOrHigherThan(PermissionLevel.REVIEWER);
+        }
+
+        return false;    }
+}

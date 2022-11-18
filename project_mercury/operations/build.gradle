@@ -1,0 +1,9 @@
+targetCompatibility = JavaVersion.VERSION_1_9
+dependencies {
+    compile project(':common')
+    compile project(':export')
+}
+
+test {
+    useJUnitPlatform()
+}

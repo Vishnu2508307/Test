@@ -1,0 +1,163 @@
+{
+  "plugin.infra" : {
+    "distribution.bucketName" : "local-dev-aero-plugin.ap-southeast-2.bronte.dev-prsn.com/distribution",
+    "repository.bucketName": "local-dev-aero-plugin.ap-southeast-2.bronte.dev-prsn.com/repository",
+    "distribution.publicUrl": "https://plugin-distribution-bronte-dev.pearson.com",
+    "repository.publicUrl": "https://plugin-repository-bronte-dev.pearson.com"
+  },
+  "schemas.infra" : {
+    "bucketName" : "local-dev-aero-plugin.ap-southeast-2.bronte.dev-prsn.com",
+    "prefix":"schemas"
+  },
+  "assets.infra" : {
+    "bucketName" : "local-dev-aero.ap-southeast-2.bronte.dev-prsn.com",
+    "prefix":"assets",
+    "publicUrl":"http://local-dev-aero.ap-southeast-2.bronte.dev-prsn.com.s3-website-ap-southeast-2.amazonaws.com",
+    "submitTopicNameOrArn": "courseware-asset-resize-submit",
+    "delayQueueNameOrArn": "courseware-asset-resize-retry-delay",
+    "alfrescoUrl": "https://usppewip.cms.pearson.com",
+    "alfrescoPushDelayTime": 10
+  },
+  "routeConsumers.infra" : {
+    "leanerEvaluateCompleteConsumers": 50,
+    "learnerStudentScopeSetConsumers": 10,
+    "leanerProgressBroadcastConsumers": 10,
+    "competencyDocumentUpdateConsumers": 2
+  },
+  "redis.infra" : {
+    "address":"redis://redis.local.phx-spr.com:6379",
+    "password":"aelpredis"
+  },
+  "cache.infra" : {
+    "enableLearnerCache": true
+  },
+  "sso_oidc.infra" : {
+    "redirectUrl": "http:/localhost:8080/sso/oidc/to",
+    "callbackUrl": "http://localhost:8080/sso/oidc/callback"
+  },
+  "sso_ies.infra" : {
+    "baseUrl": "https://tst-piapi-internal.dev-openclass.com"
+  },
+  "sso_mycloud.infra" : {
+    "baseUrl": "https://identity-internal-test.pearson.com"
+  },
+  "sso_registrar.infra" : {
+    "baseUrl": "https://user-association-qa.dev-prsn.com"
+  },
+  "passport.infra" : {
+    "baseUrl": "https://passport.dev-openclass.com"
+  },
+  "braintree.infra" : {
+    "environment": "sandbox",
+    "merchantId": "nnnz6ywxkthv7vk5",
+    "publicKey": "92fvzc8t4955jqm5",
+    "privateKey": "71a53ffbd700bb0795e47ba43f8c8e44",
+    "merchantAccountsByCurrency": {
+      "AUD":"smartSparrowAUD",
+      "USD":"dj397dhnxzb4ww88"
+    }
+  },
+  "system_credentials.infra" : {
+    "userId": "ffffffff5eb5bc8f5d2f5b01312aa65e",
+    "password": "ZbY58cH2gdbxFgsCnyVvyWdJNduRLgne",
+    "username": "gpd_bronte_system",
+    "environment": "INT"
+  },
+  "ext_http.infra" :{
+    "submitTopicNameOrArn": "ext-http-submit",
+    "delayQueueNameOrArn": "ext-http-delay-queue"
+  },
+  "learning_analytics.infra" : {
+    "adminBaseURL": "https://messaging-admin-int.dev-prsn.com",
+    "appName": "gpd_bronte_system",
+    "originatingSystemCode": "Bronte",
+    "statusBaseURL": "https://messaging-status-int.dev-prsn.com",
+    "publishBaseURL": "https://messaging-publishing-int.dev-prsn.com",
+    "schemaRegistryBaseURL": "https://messaging-registry.prd-prsn.com",
+    "autobahnEnvironment": "INT"
+  },
+  "csg.infra" : {
+    "indexUri": "https://dragonfly-qa.stg-openclass.com/pxereader-cm/2.1/api/cm/documents",
+    "applicationId": "bronte",
+    "enabled": false,
+    "batchSize": 20,
+    "completionTime": 2500
+  },
+  "plp_sqs.infra" : {
+    "queueName": "BRNT-DEV",
+    "region": "us-east-2",
+    "queueOwnerAWSAccountId": "815492460363",
+    "enabled": "false"
+  },
+  "courseware_export.infra" : {
+    "submitTopicNameOrArn": "courseware-element-to-ambrosia-submit",
+    "resultQueueName": "courseware-element-to-ambrosia-result",
+    "errorQueueName": "courseware-element-to-ambrosia-error",
+    "delayQueueNameOrArn": "courseware-element-to-ambrosia-retry-delay",
+    "bucketName": "workspace.ap-southeast-2.bronte.dev-prsn.com/export",
+    "snippetBucketName": "ambrosia-snippet.ap-southeast-2.bronte.dev-prsn.com",
+    "bucketUrl": "https://workspace-bronte-dev.pearson.com/export",
+    "concurrentConsumers": 5,
+    "maxMessagesPerPoll": 1,
+    "waitTimeSeconds": 10
+  },
+  "self_ingestion.infra" : {
+    "adapterEpubQueueNameOrArn": "ingestion-adapter-epub-submit",
+    "adapterDocxQueueNameOrArn": "ingestion-adapter-docx-submit",
+    "ambrosiaIngestionQueueNameOrArn": "ingestion-ambrosia-submit",
+    "ingestionCancelQueueNameOrArn": "ingestion-cancel-submit",
+    "bucketName": "ingestion-ap-southeast-2-bronte-pearsondev-tech",
+    "bucketUrl": "https://ingestion-bronte-dev.pearson.com"
+  },
+  "plugin_log.infra" : {
+    "enabled": false,
+    "bucketConfigs": [
+      {
+        "tableName":"generic_log_statement_by_plugin",
+        "maxRecordCount":1000,
+        "retentionPolicy":"WEEK",
+        "logBucketInstances": 5
+      },
+      {
+        "tableName":"workspace_log_statement_by_plugin",
+        "maxRecordCount":1000,
+        "retentionPolicy":"WEEK",
+        "logBucketInstances": 5
+      },
+      {
+        "tableName":"learnspace_log_statement_by_plugin",
+        "maxRecordCount":1000,
+        "retentionPolicy":"WEEK",
+        "logBucketInstances": 5
+      }
+    ]
+  },
+  "oculus.infra" : {
+    "baseUrl": "https://paperapi.stg-openclass.com"
+  },
+  "math.infra" : {
+    "mathMLUri": "https://www.wiris.net",
+    "mathMLPath": "/demo/plugins/app/showimage",
+    "metrics": true,
+    "centerbaseline": false,
+    "centerbaseline": false,
+    "bucketName" : "local-dev-aero.ap-southeast-2.bronte.dev-prsn.com",
+    "submitTopicNameOrArn": "math-asset-resolver-submit",
+    "delayQueueNameOrArn": "math-asset-resolver-retry-delay",
+    "enabled": true
+  },
+  "grade_passback.infra" : {
+    "masteringGradeSyncUrl": "https://api.staging.mastering.pearsoncmg.com",
+    "checkGradePassbackQuestionCount": true
+  },
+  "publish_metadata.infra" : {
+    "masteringLabMetadataUrl": "https://bronteil.mx-dev.pearsondev.tech/bronteil-service/labMetadata"
+  },
+  "user_content.infra" : {
+    "cacheNameOrArn": "user-content-request-notification"
+  },
+  "lti_credentials.infra" : {
+    "key": "testKey",
+    "secret": "testSecret"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  
+  "version": "1.2.0",
+  "description": "An electronic breadboard simulation",
+  "author": "John Kane",
+  "email": "jkane@example.net", 
+
+  "bronte":{
+    "pluginId":"93e2771f-6e4a-47d2-921c-ee6ab3ddb6aa",
+    "name": "Breadboard",
+    "type": "component",
+    "screenshots": ["img/mercury.jpg"],
+    "thumbnail": "img/thumbnail.png",
+    "tags": ["smart", "plugin"],
+    "configurationSchema": "config.schema.json",
+    "views": {
+      "LEARNER": {
+      "contentType": "javascript",
+      "entryPoint": "index.js",
+      "publicDir": ""
+    }
+  },
+    "searchable": [
+      {
+        "contentType": "mcq",
+        "summary": "title",
+        "body": "selection"
+      },
+      {
+        "contentType": "text",
+        "body": [
+          "options.foo"
+        ]
+      },
+      {
+        "contentType": "image",
+        "body": [
+          "cards.front-text",
+          "cards.back-text"
+        ],
+        "source": [
+          "cards.front-image",
+          "cards.back-image"
+        ]
+      },
+      {
+        "contentType": "text",
+        "summary": [
+          "title"
+        ],
+        "body": [
+          "stage.text"
+        ]
+      }
+    ]
+  }
+}
+
+
+
+
+

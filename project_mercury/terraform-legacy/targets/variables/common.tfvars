@@ -1,0 +1,78 @@
+role_arn = {
+    sandbox = "arn:aws:iam::585397755241:role/terraform"
+    dev     = "arn:aws:iam::716062133555:role/terraform"
+    qaint   = "arn:aws:iam::658380148811:role/terraform"
+    stg     = "arn:aws:iam::324267317821:role/terraform"
+    ppe     = "arn:aws:iam::443982649941:role/terraform"
+    prod    = "arn:aws:iam::591900134539:role/terraform"
+}
+
+mercury_endpoints = {
+    dev.mercury   = "workspace-service-dev.pearson.com"
+    qaint.mercury = "workspace-service-qaint.pearson.com"
+    stg.mercury   = "workspace-service-stg.pearson.com"
+    ppe.mercury   = "workspace-service-ppe.pearson.com"
+    prod.mercury  = "workspace-service.pearson.com"
+}
+
+PROJECT = "aero"
+ROLE = "terraform"
+
+dev_account_id            = "716062133555"
+qaint_account_id          = "658380148811"
+stg_account_id            = "324267317821"
+ppe_account_id            = "443982649941"
+prod_account_id           = "591900134539"
+eng_prod_account_id       = "585397755241"
+
+s3_buckets = {
+  dev.platform.ap-southeast-2         = "dev-aero.ap-southeast-2.bronte.dev-prsn.com"
+  dev.plugins.ap-southeast-2          = "dev-aero-plugin.ap-southeast-2.bronte.dev-prsn.com"
+  dev.ingestion.ap-southeast-2        = "ingestion-ap-southeast-2-bronte-pearsondev-tech"
+  dev.workspace.ap-southeast-2        = "workspace.ap-southeast-2.bronte.dev-prsn.com"
+  dev.ambrosia-snippet.ap-southeast-2 = "ambrosia-snippet.ap-southeast-2.bronte.dev-prsn.com"
+  dev.platform.us-west-2              = "dev-aero.us-west-2.bronte.dev-prsn.com"
+  dev.plugins.us-west-2               = "dev-aero-plugin.us-west-2.bronte.dev-prsn.com"
+  dev.workspace.us-west-2             = "workspace.us-west-2.bronte.dev-prsn.com"
+  dev.ambrosia-snippet.us-west-2      = "ambrosia-snippet.us-west-2.bronte.dev-prsn.com"
+
+  qaint.platform.us-east-1            = "bronte.us-east-1.bronte-qaint.pearsondev.tech"
+  qaint.plugins.us-east-1             = "plugin.us-east-1.bronte-qaint.pearsondev.tech"
+  qaint.ingestion.us-east-1           = "ingestion-us-east-1-bronte-qaint-pearsondev-tech"
+  qaint.workspace.us-east-1           = "workspace.us-east-1.bronte-qaint.pearsondev.tech"
+  qaint.ambrosia-snippet.us-east-1    = "ambrosia-snippet.us-east-1.bronte-qaint.pearsondev.tech"
+  qaint.platform.us-west-2            = "bronte.us-west-2.bronte-qaint.pearsondev.tech"
+  qaint.plugins.us-west-2             = "plugin.us-west-2.bronte-qaint.pearsondev.tech"
+  qaint.workspace.us-west-2           = "workspace.us-west-2.bronte-qaint.pearsondev.tech"
+  qaint.ambrosia-snippet.us-west-2    = "ambrosia-snippet.us-west-2.bronte-qaint.pearsondev.tech"
+
+  stg.platform.us-east-1              = "bronte.us-east-1.bronte-stg.pearsondev.tech"
+  stg.plugins.us-east-1               = "plugin.us-east-1.bronte-stg.pearsondev.tech"
+  stg.workspace.us-east-1             = "workspace.us-east-1.bronte-stg.pearsondev.tech"
+  stg.ingestion.us-east-1             = "ingestion-us-east-1-bronte-stg-pearsondev-tech"
+  stg.ambrosia-snippet.us-east-1      = "ambrosia-snippet.us-east-1.bronte-stg.pearsondev.tech"
+  stg.platform.us-west-2              = "bronte.us-west-2.bronte-stg.pearsondev.tech"
+  stg.plugins.us-west-2               = "plugin.us-west-2.bronte-stg.pearsondev.tech"
+  stg.workspace.us-west-2             = "workspace.us-west-2.bronte-stg.pearsondev.tech"
+  stg.ambrosia-snippet.us-west-2      = "ambrosia-snippet.us-west-2.bronte-stg.pearsondev.tech"
+
+  ppe.platform.us-east-1              = "bronte.us-east-1.bronte-ppe.pearsondev.tech"
+  ppe.plugins.us-east-1               = "plugin.us-east-1.bronte-ppe.pearsondev.tech"
+  ppe.workspace.us-east-1             = "workspace.us-east-1.bronte-ppe.pearsondev.tech"
+  ppe.ingestion.us-east-1             = "ingestion-us-east-1-bronte-ppe-pearsondev-tech"
+  ppe.ambrosia-snippet.us-east-1      = "ambrosia-snippet.us-east-1.bronte-ppe.pearsondev.tech"
+  ppe.platform.us-west-2              = "bronte.us-west-2.bronte-ppe.pearsondev.tech"
+  ppe.plugins.us-west-2               = "plugin.us-west-2.bronte-ppe.pearsondev.tech"
+  ppe.workspace.us-west-2             = "workspace.us-west-2.bronte-ppe.pearsondev.tech"
+  ppe.ambrosia-snippet.us-west-2      = "ambrosia-snippet.us-west-2.bronte-ppe.pearsondev.tech"
+
+  prod.platform.us-west-1             = "prod-aero.us-west-1.bronte.prd-prsn.com"
+  prod.plugins.us-west-1              = "prod-aero-plugin.us-west-1.bronte.prd-prsn.com"
+  prod.workspace.us-west-1            = "workspace.us-west-1.bronte.prd-prsn.com"
+  prod.ingestion.us-west-1            = "ingestion-us-west-1-bronte-pearsonprd-tech"
+  prod.ambrosia-snippet.us-west-1     = "ambrosia-snippet.us-west-1.bronte.prd-prsn.com"
+  prod.platform.us-east-1             = "prod-aero.us-east-1.bronte.prd-prsn.com"
+  prod.plugins.us-east-1              = "prod-aero-plugin.us-east-1.bronte.prd-prsn.com"
+  prod.workspace.us-east-1            = "workspace.us-east-1.bronte.prd-prsn.com"
+  prod.ambrosia-snippet.us-east-1     = "ambrosia-snippet.us-east-1.bronte.prd-prsn.com"
+}

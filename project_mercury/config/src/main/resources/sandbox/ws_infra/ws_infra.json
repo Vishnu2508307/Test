@@ -1,0 +1,187 @@
+{
+  "plugin.infra" : {
+    "distribution.bucketName" : "sandbox-aero-plugin.phx-spr.com/distribution",
+    "repository.bucketName": "sandbox-aero-plugin.phx-spr.com/repository",
+    "distribution.publicUrl":"http://sandbox-aero-plugin.phx-spr.com.s3-website-ap-southeast-2.amazonaws.com"
+  },
+  "schemas.infra" : {
+    "bucketName" : "sandbox-aero-plugin.phx-spr.com",
+    "prefix":"schemas"
+  },
+  "assets.infra" : {
+    "bucketName" : "sandbox-aero.phx-spr.com","prefix":"assets",
+    "publicUrl":"http://sandbox-aero.phx-spr.com.s3-website-ap-southeast-2.amazonaws.com",
+    "submitTopicNameOrArn": "courseware-asset-resize-submit",
+    "delayQueueNameOrArn": "courseware-asset-resize-retry-delay",
+    "alfrescoUrl": "https://usppewip.cms.pearson.com",
+    "alfrescoPushDelayTime": 5
+  },
+  "routeConsumers.infra" : {
+    "leanerEvaluateCompleteConsumers": 50,
+    "learnerStudentScopeSetConsumers": 10,
+    "leanerProgressBroadcastConsumers": 10,
+    "competencyDocumentUpdateConsumers": 2
+  },
+  "redis.infra" : {
+    "address":"redis://redis:6379",
+    "password":"5k6LyvSmUBqM9TpX6gTCDA4pV8Z7N5tJ"
+  },
+  "cache.infra" : {
+    "enableLearnerCache": true
+  },
+  "sso_oidc.infra" : {
+    "redirectUrl": "https://sandbox-aero.phx-spr.com/sso/oidc/to",
+    "callbackUrl": "https://sandbox-aero.phx-spr.com/sso/oidc/callback"
+  },
+  "sso_ies.infra" : {
+    "baseUrl": "http://172.0.199.10:9999/services/rest"
+  },
+  "sso_mycloud.infra" : {
+    "baseUrl": "http://172.0.199.10:9999/services/rest"
+  },
+  "sso_registrar.infra" : {
+    "baseUrl": "https://user-association.stg-openclass.com"
+  },
+  "passport.infra" : {
+    "baseUrl": "http://172.0.199.10:9999/services/rest"
+  },
+  "braintree.infra" : {
+    "environment": "sandbox",
+    "merchantId": "nnnz6ywxkthv7vk5",
+    "publicKey": "92fvzc8t4955jqm5",
+    "privateKey": "71a53ffbd700bb0795e47ba43f8c8e44",
+    "merchantAccountsByCurrency": {
+      "AUD":"smartSparrowAUD",
+      "USD":"dj397dhnxzb4ww88"
+    }
+  },
+  "system_credentials.infra" : {
+    "userId": "ffffffff5eb5bc8f5d2f5b01312aa65e",
+    "password": "ZbY58cH2gdbxFgsCnyVvyWdJNduRLgne",
+    "username": "gpd_bronte_system",
+    "environment": "INT"
+  },
+  "cassandra.infra" : {
+    "contactPoints":["cassandra_node1"],
+    "username":"cassandra",
+    "password":"cassandra",
+    "localMaxRequestsPerConnection": 2048,
+    "maxQueueSize": 512,
+    "certificate":"-----BEGIN CERTIFICATE-----
+    MIIDRzCCAi+gAwIBAgIEfRdw5zANBgkqhkiG9w0BAQsFADBTMQwwCgYDVQQGEwNh
+    dXMxGTAXBgNVBAoTEHNtYXJ0c3BhcnJvdy5jb20xEDAOBgNVBAsTB21lcmN1cnkx
+    FjAUBgNVBAMTDWNhc3NhbmRyYS1kZXYwIBcNMTgwNDE5MDY1NDU4WhgPMjExODAz
+    MjYwNjU0NThaMFMxDDAKBgNVBAYTA2F1czEZMBcGA1UEChMQc21hcnRzcGFycm93
+    LmNvbTEQMA4GA1UECxMHbWVyY3VyeTEWMBQGA1UEAxMNY2Fzc2FuZHJhLWRldjCC
+    ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAIiGhnJKUjCi06lM5Ql5vr7u
+    eOHrQRhgrLVb3RvZxwmPtIREkWSVKtPAPrOHfBu68foCvLGzosxE/7qlYsicunRY
+    qymqNTrTvgpvkKUR+Z/7lc2Feg0UyfaYU+rY08FL1+XS9BRhC78OpGdvzq3bXnoL
+    fZDNWKWEevrKnQBgxrGNAo0C/xzGQI0T2pfeV+zfmjUJ4awwc0AxOUq/OPjZo4oh
+    Nxd7+k1IJHjrx/czdjHcgqHKmGPyCB5lzHdLrSSWRfaQuk7OR1X+dS6OCSB3PZ8S
+    Di7bTENucX89sKFav5lWDWvIxOtnUkKe7pr2zCjPLnx9lj19ypucDVaLRUyCgwsC
+    AwEAAaMhMB8wHQYDVR0OBBYEFNFRyCgkCW4BQZ+GAoFp+3D8cq5IMA0GCSqGSIb3
+    DQEBCwUAA4IBAQBjtCSId4peUhNh07EN5/hIsbCfE5wygRFtoQHQtoJvt7lsor2A
+    1YObogLr8XGVjONGwX1QvbAEXRlHh0uGUQqC93C8i2ArcLo8q7YxSRorTc039hp0
+    d/LfDM4rYLyPz4vEeHqP4A+83nrrWYkc+jkXrR6DrivSD/XcNopxprgy4ISNseMi
+    M2MXQ9GxAgVHjLGjGGyvRarMzowZwX6utzpwSg4qEdoyca0lAQKAFVW8urtfQEG3
+    smhzxP3EfJeqHNGxfsBpoT/3BCsms9+dGcaO/OZyTfAHW6FdyOOFt95nI1Ev1WIs
+    H2rbUrFrDphogBQopCaY4vi18magmH/kj2mv
+    -----END CERTIFICATE-----"
+  },
+  "ext_http.infra" :{
+    "submitTopicNameOrArn": "ext-http-submit",
+    "delayQueueNameOrArn": "ext-http-delay-queue"
+  },
+  "learning_analytics.infra" : {
+    "adminBaseURL": "https://messaging-admin-int.dev-prsn.com",
+    "appName": "gpd_bronte_system",
+    "originatingSystemCode": "Bronte",
+    "statusBaseURL": "https://messaging-status-int.dev-prsn.com",
+    "publishBaseURL": "https://messaging-publishing-int.dev-prsn.com",
+    "schemaRegistryBaseURL": "https://messaging-registry.prd-prsn.com",
+    "autobahnEnvironment": "INT"
+  },
+  "csg.infra" : {
+    "indexUri": "https://ignored",
+    "applicationId": "bronte",
+    "enabled": false,
+    "batchSize": 20,
+    "completionTime": 2500
+  },
+  "plp_sqs.infra" : {
+    "queueName": "BRNT-SANDBOX",
+    "region": "us-east-2",
+    "queueOwnerAWSAccountId": "815492460363",
+    "enabled": "false"
+  },
+  "courseware_export.infra" : {
+    "submitTopicNameOrArn": "courseware-element-to-ambrosia-submit",
+    "resultQueueName": "courseware-element-to-ambrosia-result",
+    "errorQueueName": "courseware-element-to-ambrosia-error",
+    "delayQueueNameOrArn": "courseware-element-to-ambrosia-retry-delay",
+    "bucketName": "workspace.ap-southeast-2.bronte.dev-prsn.com/export",
+    "snippetBucketName": "ambrosia-snippet.ap-southeast-2.bronte.dev-prsn.com",
+    "bucketUrl": "https://workspace-bronte-dev.pearson.com/export",
+    "concurrentConsumers": 5,
+    "maxMessagesPerPoll": 1,
+    "waitTimeSeconds": 10
+  },
+  "self_ingestion.infra" : {
+    "adapterEpubQueueNameOrArn": "ingestion-adapter-epub-submit",
+    "adapterDocxQueueNameOrArn": "ingestion-adapter-docx-submit",
+    "ambrosiaIngestionQueueNameOrArn": "ingestion-ambrosia-submit",
+    "ingestionCancelQueueNameOrArn": "ingestion-cancel-submit",
+    "bucketName": "ingestion-ap-southeast-2-bronte-pearsondev-tech",
+    "bucketUrl": "https://ingestion-bronte-dev.pearson.com"
+  },
+  "plugin_log.infra" : {
+    "enabled": false,
+    "bucketConfigs": [
+      {
+        "tableName":"generic_log_statement_by_plugin",
+        "maxRecordCount":1000,
+        "retentionPolicy":"WEEK",
+        "logBucketInstances": 5
+      },
+      {
+        "tableName":"workspace_log_statement_by_plugin",
+        "maxRecordCount":1000,
+        "retentionPolicy":"WEEK",
+        "logBucketInstances": 5
+      },
+      {
+        "tableName":"learnspace_log_statement_by_plugin",
+        "maxRecordCount":1000,
+        "retentionPolicy":"WEEK",
+        "logBucketInstances": 5
+      }
+    ]
+  },
+  "oculus.infra" : {
+    "baseUrl": "http://172.0.199.10:9999/services/rest"
+  },
+  "math.infra" : {
+    "mathMLUri": "http://172.0.199.10:9999/services/rest",
+    "mathMLPath": "/demo/plugins/app/showimage",
+    "metrics": true,
+    "centerbaseline": false,
+    "bucketName" : "sandbox-aero.phx-spr.com",
+    "submitTopicNameOrArn": "math-asset-resolver-submit",
+    "delayQueueNameOrArn": "math-asset-resolver-retry-delay",
+    "enabled": true
+  },
+  "grade_passback.infra" : {
+    "masteringGradeSyncUrl": "https://api.staging.mastering.pearsoncmg.com",
+    "checkGradePassbackQuestionCount": true
+  },
+  "publish_metadata.infra" : {
+    "masteringLabMetadataUrl": "https://bronteil.mx-dev.pearsondev.tech/bronteil-service/labMetadata"
+  },
+  "user_content.infra" : {
+    "cacheNameOrArn": "user-content-request-notification"
+  },
+  "lti_credentials.infra" : {
+    "key": "",
+    "secret": ""
+  }
+}

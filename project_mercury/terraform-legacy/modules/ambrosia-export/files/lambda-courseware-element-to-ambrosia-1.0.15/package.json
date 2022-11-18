@@ -1,0 +1,25 @@
+{
+  "name": "bronte-service-lambda-courseware-element-to-ambrosia",
+  "version": "1.0.15",
+  "main": "build/index.js",
+  "scripts": {
+    "postpack": "(export tgzfile=$(ls *.tgz); mkdirp repack && cd repack && tar xf ../${tgzfile} && cd package && mv app/* . && rimraf app && zip -q -r ../../${tgzfile%.tgz}.zip * && cd ../.. && rimraf repack)",
+    "upgrade-interactive": "npm-check --update",
+    "clean": "rimraf ./build *.tgz *.zip",
+    "test": "jest"
+  },
+  "dependencies": {},
+  "files": [
+    "/node_modules",
+    "/app"
+  ],
+  "devDependencies": {
+    "aws-sdk": "^2.453.0",
+    "core-js": "^3.6.5",
+    "jest": "^26.6.2",
+    "mkdirp": "^0.5.1",
+    "npm-check": "^5.9.0",
+    "rimraf": "^2.6.3"
+  },
+  "bundleDependencies": []
+}

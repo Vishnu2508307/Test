@@ -1,0 +1,15 @@
+package com.smartsparrow.rtm.message.recv;
+
+${parameters.find{f -> f.endsWith('Id')} ? 'import java.util.UUID;':''}
+
+${parameters.find{f -> f.equals('permissionLevel')} ? 'import com.smartsparrow.iam.service.PermissionLevel;':''}
+import com.smartsparrow.rtm.message.ReceivedMessage;
+
+public class $messageName extends ReceivedMessage {
+
+<% parameters.each{ p -> %>    private <%= defineType(p)%> <%= p %>;\n<%} %>
+<% parameters.each{ p -> %>    public <%= defineType(p)%> get<%= p.capitalize() %>() {
+        return <%= p %>;
+    }\n\n<%} %>
+    //todo: generate equals and hashCode methods
+}

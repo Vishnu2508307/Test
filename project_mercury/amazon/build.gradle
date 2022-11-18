@@ -1,0 +1,10 @@
+dependencies {
+    compile project(':dse')
+    compile project(':config')
+
+    compile 'com.amazonaws:aws-java-sdk:1.11.1021'
+}
+
+test {
+    useJUnitPlatform()
+}

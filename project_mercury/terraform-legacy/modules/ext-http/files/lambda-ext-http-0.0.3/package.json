@@ -1,0 +1,29 @@
+{
+  "name": "lambda-ext-http",
+  "version": "0.0.2",
+  "main": "build/index.js",
+  "scripts": {
+    "upgrade-interactive": "npm-check --update",
+    "clean": "rimraf ./build *.tgz *.zip"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.814.0",
+    "request": "^2.88.0",
+    "request-promise-native": "^1.0.7",
+    "stringify-clone": "^2.0.1"
+  },
+  "bundleDependencies": [
+    "request",
+    "request-promise-native",
+    "stringify-clone"
+  ],
+  "files": [
+    "/node_modules",
+    "/app"
+  ],
+  "devDependencies": {
+    "mkdirp": "^0.5.1",
+    "npm-check": "^5.9.0",
+    "rimraf": "^2.6.3"
+  }
+}

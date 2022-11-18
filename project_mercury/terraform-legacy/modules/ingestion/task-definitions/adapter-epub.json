@@ -1,0 +1,77 @@
+[
+  {
+    "name": "${container_name}",
+    "image": "${image}",
+    "essential": true,
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-region": "${aws_region_logs}",
+        "awslogs-group": "${aws_log_group}",
+        "awslogs-stream-prefix": "${ecs_cluster}"
+      }
+    },
+    "portMappings": [{
+        "containerPort": ${container_port},
+        "hostPort": ${host_port},
+        "protocol": "tcp"
+    }],
+    "environment": [
+      {
+        "name": "environment",
+        "value": "${env}"
+      },
+      {
+        "name": "AWS_REGION",
+        "value": "${region}"
+      },
+      {
+        "name": "ECS_CLUSTER",
+        "value": "${ecs_cluster}"
+      },
+      {
+        "name": "ECS_SERVICE_NAME",
+        "value": "${ecs_service_name}"
+      },
+      {
+        "name": "SQS_NAME",
+        "value": "${queue_name}"
+      },
+      {
+        "name": "SNS_RESULT_TOPIC",
+        "value": "${result_topic}"
+      },
+      {
+        "name": "SNS_EVENT_TOPIC",
+        "value": "${event_topic}"
+      },
+      {
+        "name": "S3_BUCKET_NAME",
+        "value": "${ingestion_bucket_name}"
+      },
+      {
+        "name": "SNS_ERROR_TOPIC",
+        "value": "${error_topic}"
+      }
+    ],
+
+    "tags": [
+      {
+        "key": "t_AppID",
+        "value": "${app_id}"
+      },
+      {
+        "key": "t_cost_centre",
+        "value": "${cost_centre}"
+      },
+      {
+        "key": "t_environment",
+        "value": "${environment}"
+      },
+      {
+        "key": "t_dcl",
+        "value": "${dcl}"
+      }
+    ]
+  }
+]

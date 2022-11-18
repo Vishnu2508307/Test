@@ -1,0 +1,11 @@
+
+dependencies {
+    compile project(':dse')
+    compile project(':cache')
+
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.11.3'
+}
+
+test {
+    useJUnitPlatform()
+}

@@ -1,0 +1,21 @@
+{
+  "id": "93e2771f-6e4a-47d2-921c-ee6ab3ddb6aa",
+  "name": "Breadboard",
+  "description": "An electronic breadboard simulation",
+  "screenshots": [],
+  "author": "John Kane",
+  "email": "jkane@example.net",
+  "version": "1.2.0",
+  "license": "MIT",
+  "type": "component",
+  "configurationSchema": "config.schema.json",
+  "views": {
+    "LEARNER": {
+      "contentType": "javascript",
+      "entryPoint": "index.js",
+      "publicDir": ""
+    }
+  },
+  "searchable":["title","selection.type","options.properties.allowMultipleSelections"],
+  "guide":"http://guideurl.com"
+}

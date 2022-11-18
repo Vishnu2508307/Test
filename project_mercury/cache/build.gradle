@@ -1,0 +1,12 @@
+
+dependencies {
+    compile project(':common')
+    compile project(':dataevent')
+    compile project(':diffsync')
+    //
+    compile 'org.redisson:redisson:3.11.2'
+}
+
+test {
+    useJUnitPlatform()
+}

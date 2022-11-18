@@ -1,0 +1,162 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "chainedCondition": {
+      "title": "chainedCondition",
+      "description": "chainedCondition",
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "operator": {
+          "type": "string"
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/chainedCondition"
+              },
+              {
+                "$ref": "#/definitions/evaluator"
+              }
+            ]
+          }
+        }
+      },
+      "required": [
+        "type",
+        "operator",
+        "conditions"
+      ]
+    },
+    "evaluator": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "operator": {
+          "type": "string"
+        },
+        "operandType": {
+          "type": "string"
+        },
+        "lhs": {
+          "type": "object",
+          "properties": {
+            "resolver": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "context": {
+                  "type": "array",
+                  "item": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "value": {
+              "type": [
+                "string",
+                "array",
+                "number",
+                "object",
+                "boolean"
+              ]
+            },
+            "schemaProperty": {
+              "type": "object"
+            },
+            "category": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "resolver"
+          ]
+        },
+        "rhs": {
+          "type": "object",
+          "properties": {
+            "resolver": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "context": {
+                  "type": "array",
+                  "item": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "value": {
+              "type": [
+                "string",
+                "array",
+                "number",
+                "object",
+                "boolean"
+              ]
+            },
+            "schemaProperty": {
+              "type": "object"
+            },
+            "category": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "resolver"
+          ]
+        },
+        "options": {
+          "type": "array",
+          "item": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "value": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "operator",
+        "operandType",
+        "lhs",
+        "options"
+      ]
+    }
+  },
+  "$ref": "#/definitions/chainedCondition"
+}

@@ -1,0 +1,23 @@
+{
+  "name": "lambda-sqs-to-sns",
+  "version": "0.0.1",
+  "description": "This function is intended to read records from SQS `record.body` and publish it to an SNS `record.Message`.",
+  "main": "app/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postpack": "(export tgzfile=$(ls *.tgz); mkdirp repack && cd repack && tar xf ../${tgzfile} && cd package && mv app/* . && rimraf app && zip -q -r ../../${tgzfile%.tgz}.zip * && cd ../.. && rimraf repack)",
+    "clean": "rimraf ./build *.tgz *.zip"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.455.0"
+  },
+  "bundleDependencies": [],
+  "files": [
+    "/node_modules",
+    "/app"
+  ],
+  "devDependencies": {
+    "mkdirp": "^0.5.1",
+    "rimraf": "^2.6.3"
+  }
+}

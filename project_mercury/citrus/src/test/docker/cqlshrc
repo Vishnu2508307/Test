@@ -1,0 +1,8 @@
+[cql]
+version = 3.4.4
+
+[ssl]
+version = SSLv23
+
+[connection]
+factory = cqlshlib.ssl.ssl_transport_factory

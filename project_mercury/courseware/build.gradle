@@ -1,0 +1,25 @@
+targetCompatibility = JavaVersion.VERSION_1_9
+dependencies {
+    compile project(':annotation')
+    compile project(':dse')
+    compile project(':config')
+    compile project(':iam')
+    compile project(':sso')
+    compile project(':amazon')
+    compile project(':asset')
+    compile project(':ext_http')
+    compile project(':annotation')
+    compile project(':ingestion')
+    compile project(':pubsub')
+    compile project(':math')
+
+    compile 'com.github.zafarkhaja:java-semver:0.9.0'
+
+    testCompile 'org.apache.camel:camel-test:2.23.1'
+    testCompile project(':iam').sourceSets.test.output
+    testCompile project(':common').sourceSets.test.output
+}
+
+test {
+    useJUnitPlatform()
+}

@@ -1,0 +1,17 @@
+targetCompatibility = JavaVersion.VERSION_1_9
+dependencies {
+    compile project(':common')
+    compile project(':iam')
+    compile project(':sso')
+    compile project(':annotation')
+    compile project(':asset')
+    compile project(':courseware')
+    compile project(':rtm')
+    compile project(':graphql')
+    compile project(':rest')
+    compile project(':math')
+}
+
+test {
+    useJUnitPlatform()
+}

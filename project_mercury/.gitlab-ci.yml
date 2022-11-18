@@ -1,0 +1,1543 @@
+# TODO: add security scan jobs (and allow devs to run on branches too)
+# TODO: make coverage badge a static asset so it does not disappear on in progress pipelines (just pass artifacts down via needs and dependencies to solve)
+
+stages:
+  - ticketing   # run the jira tickets parsing job
+  - test        # run automated tests, static code analysis
+  - post_test   # perform after test operations, coverage calc, etc.
+  - dryrun      # run terraform plan and schema output in all envs
+  - build       # create and assemble the artifact(s), publish image
+  - probe       # search into and explore very thoroughly
+  - report      # visualize citrus tests reports
+  - pre_release # bump up version, build container, generate deploy to dev pipeline
+  - validate    # deploy to dev to validate the project
+  - release     # git tag version, create the upper envs deployment pipelines
+  - uat         # deploy to qaint and ppe
+  - stage       # deploy to stg
+  - promote     # promote release to PROD env
+#  - smoke      # run smoke tests on environment(s)
+
+# Include the standard workflow for pipeline creation
+include:
+  - project: 'pearsontechnology/gpt/bronte/pipeline/bronte-pipeline-template'
+    file: '/workflow-default.gitlab-ci.yml'
+
+# TODO: create new workflow template for release branches and move the rules to the template
+# List of rules (keep it updated):
+
+# run_job_manually
+# run_version_bump_on_main_branch
+# run_version_bump_on_release_branches
+# run_on_mr_to_main_branch
+# run_on_mr_to_release_branches
+# run_on_merge_to_main_branch
+# run_on_merge_to_release_branches
+# run_ci_after_version_bump_commit_on_main_branch
+# run_ci_after_version_bump_commit_on_release_branches
+# run_deploy_on_tag_creation_on_main_branch
+# run_deploy_on_tag_creation_on_release_branches
+
+# What the jobs use (KEEP IT UPDATED):
+
+# run_job_manually_on_random_branches
+# - gradle:check
+# - generate:dryrun:pipelines
+# - dryrun:DEV
+# - dryrun:QAINT
+# - dryrun:PPE
+# - dryrun:STG
+# - dryrun:PROD
+# - gradle:assemble
+# - build:jar
+# - container:build
+# - container:validate
+# - container:scan:snyk
+# - container:scan:twistlock
+# - runner:*:citrus
+# - runner:*:report
+
+# run_version_bump_on_main_branch
+# - version:bump
+
+# run_version_bump_on_release_branches
+# - version:bump
+
+# run_on_mr_to_main_branch
+# - gradle:check
+# - generate:dryrun:pipelines
+# - dryrun:DEV
+# - dryrun:QAINT
+# - dryrun:PPE
+# - dryrun:STG
+# - dryrun:PROD
+# - gradle:assemble
+# - container:build
+# - container:validate
+# - container:scan:snyk
+# - container:scan:twistlock
+# - runner:*:citrus
+# - runner:*:report
+
+# run_on_mr_to_release_branches
+# - gradle:check
+# - generate:dryrun:pipelines
+# - dryrun:DEV
+# - dryrun:QAINT
+# - dryrun:PPE
+# - dryrun:STG
+# - dryrun:PROD
+# - gradle:assemble
+# - container:build
+# - container:validate
+# - container:scan:snyk
+# - container:scan:twistlock
+# - runner:*:citrus
+# - runner:*:report
+
+# run_ci_after_version_bump_commit_on_main_branch
+# - jira:fetch
+# - build:jar
+# - container:build
+# - container:validate
+# - container:scan:snyk
+# - container:scan:twistlock
+# - publish:container
+# - generate:DEV:pipeline
+# - deploy:DEV
+
+# run_ci_after_version_bump_commit_on_release_branches
+# - jira:fetch
+# - build:jar
+# - container:build
+# - container:validate
+# - container:scan:snyk
+# - container:scan:twistlock
+# - publish:container
+# - tag:release:to:upper:envs
+# - generate:upper:envs:pipelines
+
+# manual_run_deploy_on_tag_creation_on_release_branches
+# - deploy:QAINT
+# - deploy:PPE
+# - deploy:STG
+# - deploy:PROD
+
+# TODO:
+# must auto run MR then CI on release branch
+# and ensure the rel branch was created from a passed MR from main on rel branch creation before running version bump
+
+# manual jobs
+.manual_jobs_random: &run_job_manually_on_random_branches
+  if: '$CI_MERGE_REQUEST_IID == null && $CI_COMMIT_MESSAGE !~ /.*Bump up version to.*/ && $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH && $CI_COMMIT_BRANCH !~ /^rel-[0-9-]+$/'
+  when: manual
+
+# never run on a merge to main branch without an MR
+.version_bump_main: &run_version_bump_on_main_branch
+  if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_MESSAGE !~ /.*MAIN Bump up version to/'
+  when: on_success
+
+# never run on a merge to release branches without an MR
+.version_bump_release: &run_version_bump_on_release_branches
+  if: '$CI_COMMIT_BRANCH =~ /^rel-[0-9-]+$/ && $CI_COMMIT_MESSAGE !~ /.*REL Bump up version to.*/'
+  when: on_success
+
+# MR created to main branch
+.mr_to_main: &run_on_mr_to_main_branch
+  if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH'
+  when: on_success
+
+# MR created to release branches
+.mr_to_release: &run_on_mr_to_release_branches
+  if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^rel-[0-9-]+$/'
+  when: on_success
+
+# run the CI for this version on main branch
+.ci_main: &run_ci_after_version_bump_commit_on_main_branch
+  if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_MESSAGE =~ /MAIN Bump up version to/'
+  when: on_success
+
+# run the CI for this version on the release branches
+.ci_release: &run_ci_after_version_bump_commit_on_release_branches
+  if: '$CI_COMMIT_BRANCH =~ /^rel-[0-9-]+$/ && $CI_COMMIT_MESSAGE =~ /REL Bump up version to/'
+  when: on_success
+
+# run the CI for this version on the release branches
+.ci_manual_release: &manual_run_ci_after_version_bump_commit_on_release_branches
+  if: '$CI_COMMIT_BRANCH =~ /^rel-[0-9-]+$/ && $CI_COMMIT_MESSAGE =~ /REL Bump up version to/'
+  when: manual
+  allow_failure: false
+
+# run deployment pipeline on tag creation from release branches
+.deploy_release: &manual_run_deploy_on_tag_creation_on_release_branches
+  if: '$CI_COMMIT_BRANCH =~ /^rel-[0-9-]+$/ && $CI_COMMIT_TAG =~ /^v[0-9\.]*rel-[0-9-]+$/'
+  when: manual
+  allow_failure: false
+
+
+###################################################################################
+
+#
+#
+#
+variables:
+  # Disable the Gradle daemon for Continuous Integration servers as correctness
+  # is usually a priority over speed in CI environments. Using a fresh
+  # runtime for each build is more reliable since the runtime is completely
+  # isolated from any previous builds.
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx3072m -Dorg.gradle.parallel=true"
+  JACOCO_REPORT_XML: build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml
+  NUM_CITRUS_RUNNERS: 5
+
+# 
+before_script:
+  - export GRADLE_USER_HOME=`pwd`/.gradle
+
+#
+# Run jira fetch job to retrieve all tickets associated with this release.
+# Create jira_tickets file to be used by the jira labelling job.
+#
+jira:fetch:
+  stage: ticketing
+  tags:
+    - bronte-eng_prod-fargate-generic-alpine-3-14
+  rules:
+    - *run_ci_after_version_bump_commit_on_main_branch
+    - *run_ci_after_version_bump_commit_on_release_branches
+  allow_failure: true
+  interruptible: true
+  script:
+    # this job runs only on main and release branches (because only those run version bump)
+    # if it's the main branch, try to do the best possible to find tickets
+    # if it's a release branch, do it correctly
+    - set -e
+    - |
+      exp="^rel-[0-9]*-[0-9]*$"
+      if [ "${CI_COMMIT_BRANCH}" == "${CI_DEFAULT_BRANCH}" ]; then
+        mkdir -p build/jira_parse/
+        cd ${CI_PROJECT_DIR}
+        touch build/jira_parse/jira_tickets
+        git fetch --tags --update-head-ok origin +refs/heads/main:refs/heads/main
+        git log --pretty=oneline tags/$(git tag | tail -2 | head -1)..${CI_COMMIT_SHA}  | grep -o "BRNT-[0-9]*" | sort -u > ${CI_PROJECT_DIR}/build/jira_parse/jira_tickets
+        cat build/jira_parse/jira_tickets
+      elif [[ $CI_COMMIT_BRANCH =~ $exp ]]; then
+        echo "Preparing to clone"
+        git config user.name "serv.gitlab"
+        git config user.email "serv.gitlab@gitlab.registry.token"
+        mkdir -p build/jira_parse/tmp
+        cd build/jira_parse/tmp
+        git clone https://gitlab-ci-token:$(aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:ap-southeast-2:585397755241:secret:/gocd/gitlab" --region ap-southeast-2 | jq -r .SecretString | jq -r .oauth_token)@gitlab.com/pearsontechnology/gpt/bronte/service/bronte-service-mercury.git
+        cd bronte-service-mercury
+        PREVIOUS_RELEASE_BRANCH=$(git branch -r | grep -o "rel-[0-9]*-[0-9]*$" | sort -u | grep -B 1 $CI_COMMIT_BRANCH | grep -v $CI_COMMIT_BRANCH)
+        touch ../../jira_tickets
+        git log --pretty=oneline origin/${PREVIOUS_RELEASE_BRANCH}..origin/$CI_COMMIT_BRANCH | grep -o "BRNT-[0-9]*" | sort -u > ../../jira_tickets
+        cd ../../
+        cat jira_tickets
+      else
+        echo "This branch shouldn't have any tickets fetched. Exiting with error..."
+        exit 1
+      fi
+  artifacts:
+    expire_in: 30 days
+    when: always
+    paths:
+      - ${CI_PROJECT_DIR}/build/jira_parse/jira_tickets
+
+
+#
+# Run gradle check which performs verification tasks, such as running the unit tests.
+# Run gradle assemble to build the jar artifact. 
+# Create the "split" files for the citrus tests.
+#
+# Note: this job is combined because it is slow. Ideally it would be split in different stages. (maybe split and run in parallel or cache results?)
+#
+gradle:check:
+  stage: test
+  tags:
+    - bronte-eng_prod-fargate-openjdk-11-0-11
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+    - *run_ci_after_version_bump_commit_on_release_branches
+  needs: []
+  interruptible: true
+  script:
+    - set -e
+    - 'export nexusUsername="$(aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:ap-southeast-2:585397755241:secret:/nexus" --region ap-southeast-2 --query "SecretString" --output text | jq -r ".user")"'
+    - 'export nexusPassword="$(aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:ap-southeast-2:585397755241:secret:/nexus" --region ap-southeast-2 --query "SecretString" --output text | jq -r ".password")"'
+    - ./gradlew check --parallel -Dorg.gradle.jvmargs=-Xmx1024m
+    - cat ${CI_PROJECT_DIR}/build/reports/jacoco/jacocoRootReport/html/index.html
+  artifacts:
+    expire_in: 30 days
+    # unit test reports - see https://docs.gitlab.com/ee/ci/unit_test_reports.html
+    when: always
+    reports:
+      junit: "*/build/test-results/test/**/TEST-*.xml"
+    # code coverage visualization (see job "visualize_coverage")
+    expose_as: 'Coverage Report'
+    paths:
+      # check artifacts
+      - $JACOCO_REPORT_XML
+      - ${CI_PROJECT_DIR}/build/reports/jacoco/jacocoRootReport/html/
+      - ${CI_PROJECT_DIR}/build/reports/jacoco/jacocoRootReport/html/index.html
+      - ${CI_PROJECT_DIR}/graphql/build/reports/spotbugs/main.html
+
+generate:dryrun:pipelines:
+  stage: test
+  tags:
+    - bronte-eng_prod-fargate-generic-alpine-3-14
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+  needs: []
+  interruptible: true
+  script:
+    - set -e
+    - CURRENT_VERSION=$(grep -oE "=.*" gradle.properties | cut -c 2-)
+    - echo "Generating pipelines for tag version $CURRENT_VERSION"
+    - apk add m4
+    - m4 -D VAR_CURRENT_VERSION=$CURRENT_VERSION -D VAR_ENV=dev   -D VAR_ACCOUNT_ID=716062133555 -D VAR_REGION=ap-southeast-2 -D VAR_GENERIC_ALPINE_RUNNER=bronte-dev-fargate-generic-alpine-3-14   -D VAR_CQLSH_RUNNER=bronte-dev-fargate-cqlsh-5-0-4   -D VAR_OPENJDK_RUNNER=bronte-dev-fargate-openjdk-11-0-11   -D VAR_TERRAFORM_RUNNER=bronte-dev-fargate-terraform-1-0-0   -D VAR_TERRAFORM_LEGACY_RUNNER=bronte-dev-fargate-terraform-0-11-11   -D VAR_CASSANDRA_ENDPOINT=10.87.16.11 -D VAR_CASSANDRA_GATEWAY=cassandra-gateway-dev.ap-southeast-2.gitlab.internal template-dryrun-deploy.gitlab-ci.yml > dryrun-deploy-to-dev.yml
+    - m4 -D VAR_CURRENT_VERSION=$CURRENT_VERSION -D VAR_ENV=qaint -D VAR_ACCOUNT_ID=658380148811 -D VAR_REGION=us-east-1      -D VAR_GENERIC_ALPINE_RUNNER=bronte-qaint-fargate-generic-alpine-3-14 -D VAR_CQLSH_RUNNER=bronte-qaint-fargate-cqlsh-5-0-4 -D VAR_OPENJDK_RUNNER=bronte-qaint-fargate-openjdk-11-0-11 -D VAR_TERRAFORM_RUNNER=bronte-qaint-fargate-terraform-1-0-0 -D VAR_TERRAFORM_LEGACY_RUNNER=bronte-qaint-fargate-terraform-0-11-11 -D VAR_CASSANDRA_ENDPOINT=10.82.78.12 -D VAR_CASSANDRA_GATEWAY=cassandra-gateway-qaint.us-east-1.gitlab.internal    template-dryrun-deploy.gitlab-ci.yml > dryrun-deploy-to-qaint.yml
+    - m4 -D VAR_CURRENT_VERSION=$CURRENT_VERSION -D VAR_ENV=ppe   -D VAR_ACCOUNT_ID=443982649941 -D VAR_REGION=us-east-1      -D VAR_GENERIC_ALPINE_RUNNER=bronte-ppe-fargate-generic-alpine-3-14   -D VAR_CQLSH_RUNNER=bronte-ppe-fargate-cqlsh-5-0-4   -D VAR_OPENJDK_RUNNER=bronte-ppe-fargate-openjdk-11-0-11   -D VAR_TERRAFORM_RUNNER=bronte-ppe-fargate-terraform-1-0-0   -D VAR_TERRAFORM_LEGACY_RUNNER=bronte-ppe-fargate-terraform-0-11-11   -D VAR_CASSANDRA_ENDPOINT=10.82.79.8  -D VAR_CASSANDRA_GATEWAY=cassandra-gateway-ppe.us-east-1.gitlab.internal      template-dryrun-deploy.gitlab-ci.yml > dryrun-deploy-to-ppe.yml
+    - m4 -D VAR_CURRENT_VERSION=$CURRENT_VERSION -D VAR_ENV=stg   -D VAR_ACCOUNT_ID=324267317821 -D VAR_REGION=us-east-1      -D VAR_GENERIC_ALPINE_RUNNER=bronte-stg-fargate-generic-alpine-3-14   -D VAR_CQLSH_RUNNER=bronte-stg-fargate-cqlsh-5-0-4   -D VAR_OPENJDK_RUNNER=bronte-stg-fargate-openjdk-11-0-11   -D VAR_TERRAFORM_RUNNER=bronte-stg-fargate-terraform-1-0-0   -D VAR_TERRAFORM_LEGACY_RUNNER=bronte-stg-fargate-terraform-0-11-11   -D VAR_CASSANDRA_ENDPOINT=10.82.80.33 -D VAR_CASSANDRA_GATEWAY=cassandra-gateway-stg.us-east-1.gitlab.internal      template-dryrun-deploy.gitlab-ci.yml > dryrun-deploy-to-stg.yml
+    - m4 -D VAR_CURRENT_VERSION=$CURRENT_VERSION -D VAR_ENV=prod  -D VAR_ACCOUNT_ID=591900134539 -D VAR_REGION=us-west-1      -D VAR_GENERIC_ALPINE_RUNNER=bronte-prod-fargate-generic-alpine-3-14  -D VAR_CQLSH_RUNNER=bronte-prod-fargate-cqlsh-5-0-4  -D VAR_OPENJDK_RUNNER=bronte-prod-fargate-openjdk-11-0-11  -D VAR_TERRAFORM_RUNNER=bronte-prod-fargate-terraform-1-0-0  -D VAR_TERRAFORM_LEGACY_RUNNER=bronte-prod-fargate-terraform-0-11-11  -D VAR_CASSANDRA_ENDPOINT=10.82.39.8  -D VAR_CASSANDRA_GATEWAY=cassandra-gateway-prod.us-west-1.gitlab.internal     template-dryrun-deploy.gitlab-ci.yml > dryrun-deploy-to-prod.yml
+  artifacts:
+    paths:
+      - dryrun-deploy-to-dev.yml
+      - dryrun-deploy-to-qaint.yml
+      - dryrun-deploy-to-ppe.yml
+      - dryrun-deploy-to-stg.yml
+      - dryrun-deploy-to-prod.yml
+
+dryrun:DEV:
+  stage: dryrun
+  trigger:
+    include:
+      - artifact: dryrun-deploy-to-dev.yml
+        job: generate:dryrun:pipelines
+    strategy: depend
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+
+dryrun:QAINT:
+  stage: dryrun
+  trigger:
+    include:
+      - artifact: dryrun-deploy-to-qaint.yml
+        job: generate:dryrun:pipelines
+    strategy: depend
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+
+dryrun:PPE:
+  stage: dryrun
+  trigger:
+    include:
+      - artifact: dryrun-deploy-to-ppe.yml
+        job: generate:dryrun:pipelines
+    strategy: depend
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+
+dryrun:STG:
+  stage: dryrun
+  trigger:
+    include:
+      - artifact: dryrun-deploy-to-stg.yml
+        job: generate:dryrun:pipelines
+    strategy: depend
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+
+dryrun:PROD:
+  stage: dryrun
+  trigger:
+    include:
+      - artifact: dryrun-deploy-to-prod.yml
+        job: generate:dryrun:pipelines
+    strategy: depend
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+
+gradle:assemble:
+  stage: build
+  tags:
+    - bronte-eng_prod-fargate-openjdk-11-0-11
+  needs: []
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+  interruptible: true
+  script:
+    - set -e
+    - 'export nexusUsername="$(aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:ap-southeast-2:585397755241:secret:/nexus" --region ap-southeast-2 --query "SecretString" --output text | jq -r ".user")"'
+    - 'export nexusPassword="$(aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:ap-southeast-2:585397755241:secret:/nexus" --region ap-southeast-2 --query "SecretString" --output text | jq -r ".password")"'
+    - ./gradlew assemble --parallel -Dorg.gradle.jvmargs=-Xmx1024m
+    - |
+      zipinfo -1 citrus/build/libs/citrus-*-tests.jar | grep -E '\.feature' | sort > citrus/build/generated/citrus_features
+      split --number=r/${NUM_CITRUS_RUNNERS} --suffix-length=1 --numeric-suffixes=1 citrus/build/generated/citrus_features citrus/build/generated/citrus_features_
+  artifacts:
+    expire_in: 30 days
+    when: always
+    paths:
+      - jetty/build/libs/mercury-*.jar
+      - simulator/build/distributions/simulator-*.zip
+      - citrus/build/libs/citrus-*-tests.jar
+      - citrus/build/generated/citrus_features
+      - citrus/build/generated/citrus_features_*
+
+# No cache needed; this is the only step that needs it.
+#  cache:
+#    key: "$CI_COMMIT_REF_NAME"
+#    policy: push
+#    paths:
+#      - build
+#      - .gradle
+
+#
+# Perform code coverage viz.
+# See: https://docs.gitlab.com/ee/user/project/merge_requests/test_coverage_visualization.html
+#
+# FIXME: this does not appear to work because the root jacoco report does not include the module names???
+
+#visualize_coverage:
+#  stage: post_test
+#  tags:
+#    - bronte-docker
+#  image: registry.gitlab.com/haynes/jacoco2cobertura:1.0.7
+#  needs: ["gradle:check"]
+#  dependencies:
+#    - gradle:check
+#  script:
+#    - set -e
+#    # convert report from jacoco to cobertura, using relative project path
+#    - python /opt/cover2cover.py $JACOCO_REPORT_XML $CI_PROJECT_DIR/src/main/java/ > build/reports/cobertura.xml
+#  artifacts:
+#    expire_in: 30 days
+#    reports:
+#      cobertura: build/reports/cobertura.xml
+#  coverage: '/TOTAL.*\s+(\d+%)$/' [0-9]+(?:\.[0-9]*)|(?<=^|>)\d+%(?=<|$)
+
+#build_coverage_badge:
+#  stage: post_test
+#  tags:
+#    - bronte-generic
+#  needs: ["gradle:check"]
+#  rules:
+#    - if: '$CI_COMMIT_TAG'
+#      when: never
+#    - if: '$CI_COMMIT_MESSAGE =~ /VU Bump up version to/'
+#      when: on_success
+#    - if: '$CI_COMMIT_MESSAGE !~ /VU Bump up version to/ && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+#      when: never
+#    - *run_for_all
+#  dependencies:
+#    - gradle:check
+#  script:
+#    - set -x
+#    - set -o pipefail
+#    # this job is necessary since the cobertura does not work in gitlab for java projects with multiple sources
+#    # see https://gitlab.com/gitlab-org/gitlab/-/issues/215747
+#    - echo "Building coverage badge"
+#    # read the total coverage from the index.html
+#    - total=$(grep -E '<tfoot>(.*?)<\/tfoot>' ${CI_PROJECT_DIR}/build/reports/jacoco/jacocoRootReport/html/index.html -o | grep -E '<td class="ctr2">(.*?)</td>' -o | grep -E '(\d+)(\d*\%)' -o | grep -E '(\d+)' -o | head -n1) &&
+#    # set the color accordingly with the total coverage value
+#    - color="#6f42c1"
+#    - if [ $total -ge 20 ]; then color="#86bb21"; fi
+#    - if [ $total -ge 40 ]; then color="#b78323"; fi
+#    - if [ $total -ge 60 ]; then color="#a4a61d"; fi
+#    - if [ $total -ge 80 ]; then color="#86bb21"; fi
+#    # create the coverage svg file and set its color and coverage value
+#    - |
+#      cat > coverage.svg <<EOL
+#      <svg xmlns="http://www.w3.org/2000/svg" width="99" height="20">
+#      <linearGradient id="b" x2="0" y2="100%">
+#      <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+#      <stop offset="1" stop-opacity=".1"/>
+#      </linearGradient>
+#      <mask id="coverage_1">
+#      <rect width="99" height="20" rx="3" fill="#fff"/>
+#      </mask>
+#      <g mask="url(#coverage_1)">
+#      <path fill="#555" d="M0 0h65v20H0z"/>
+#      <path fill="color_value" d="M65 0h34v20H65z"/>
+#      <path fill="url(#b)" d="M0 0h99v20H0z"/>
+#      </g>
+#      <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
+#      <text x="33" y="15" fill="#010101" fill-opacity=".3">coverage</text>
+#      <text x="32" y="14">coverage</text>
+#      </g>
+#      <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
+#      <text x="83" y="15" fill="#010101" fill-opacity=".3">coverage_value%</text>
+#      <text x="82" y="14">coverage_value%</text>
+#      </g>
+#      </svg>
+#      EOL
+#    - sed -i "s|coverage_value|$total|g" coverage.svg
+#    - sed -i "s|color_value|$color|g" coverage.svg
+#    - echo "Coverage badge build completed"
+#  artifacts:
+#    expire_in: 30 days
+#    when: always
+#    expose_as: 'Coverage'
+#    paths:
+#      - coverage.svg
+
+#post:coverage:
+#  stage: post_test
+#  tags:
+#    - bronte-generic
+#  needs: ["build_coverage_badge"]
+#  rules:
+#    - *run_for_MR
+#  dependencies:
+#    - build_coverage_badge
+#  script:
+#    - set -e
+#    - echo "Posting coverage badge for branch [${CI_MERGE_REQUEST_SOURCE_PROJECT_ID}] as mercury_bot"
+#    - |
+#      cat > body.json <<EOL
+#      {
+#        "id": "${CI_MERGE_REQUEST_SOURCE_PROJECT_ID}",
+#        "merge_request_iid": ${CI_MERGE_REQUEST_IID},
+#        "body": "![coverage report](https://gitlab.com/pearsontechnology/gpt/bronte/service/bronte-service-mercury/-/jobs/artifacts/${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME}/raw/coverage.svg?job=build_coverage_badge)"
+#      }
+#      EOL
+#    - 'curl -H "Content-Type: application/json" -H "PRIVATE-TOKEN: ${MERCURY_BOT_TOKEN}" -X POST -d @body.json https://gitlab.com/api/v4/projects/${CI_MERGE_REQUEST_SOURCE_PROJECT_ID}/merge_requests/${CI_MERGE_REQUEST_IID}/notes'
+
+# Build the mercury jar
+#
+build:jar:
+  stage: build
+  tags:
+    - bronte-eng_prod-fargate-openjdk-11-0-11
+  needs: []
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+    - *run_ci_after_version_bump_commit_on_main_branch
+    - *run_ci_after_version_bump_commit_on_release_branches
+  interruptible: true
+  script:
+    - set -e
+    - 'export nexusUsername="$(aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:ap-southeast-2:585397755241:secret:/nexus" --region ap-southeast-2 --query "SecretString" --output text | jq -r ".user")"'
+    - 'export nexusPassword="$(aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:ap-southeast-2:585397755241:secret:/nexus" --region ap-southeast-2 --query "SecretString" --output text | jq -r ".password")"'
+    - ./gradlew assemble --parallel -Dorg.gradle.jvmargs=-Xmx1024m
+    - mercuryFileName=$(ls jetty/build/libs/mercury*.jar | awk -F '/' '{print $4;}')
+    - mkdir -p jetty/build/resources/
+    - 'echo -e "{ \"mercuryFileName\": \"$mercuryFileName\" }" > jetty/build/resources/goss-vars.json'
+  artifacts:
+    expire_in: 30 days
+    when: always
+    paths:
+      - jetty/build/libs/mercury-*.jar
+      - jetty/build/resources/goss-vars.json
+
+# Build the docker container
+#
+container:build:
+  stage: build
+  tags:
+    - bronte-eng_prod-dind-generic-alpine-3-14
+  image: public.ecr.aws/docker/library/docker:20
+  services:
+    - name: public.ecr.aws/docker/library/docker:20-dind
+      alias: docker
+  needs:
+    - build:jar
+  dependencies:
+    - build:jar
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+    IMAGE_NAME: bronte/mercury:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+    - *run_ci_after_version_bump_commit_on_main_branch
+    - *run_ci_after_version_bump_commit_on_release_branches
+  interruptible: true
+  script:
+    - set -e
+    - apk --no-cache add pigz
+    # do the same logic as gradle setup does (working dir)
+    - |
+      # change paths such that ./Dockerfile
+      cd jetty
+      # Build the container image with docker and a Dockerfile
+      docker build --progress=plain --no-cache -t ${IMAGE_NAME} .
+      cd ${CI_PROJECT_DIR}
+    # Save the container image to disk to be used as a Gitlab artifact
+    - mkdir container
+    - docker save ${IMAGE_NAME} | pigz -9 > container/container_image.tar.gz
+    - cd container
+    - split -b 500000000 container_image.tar.gz "container_image.tar.gz.part"
+    - rm container_image.tar.gz
+    - cd ${CI_PROJECT_DIR}
+    - docker images ${IMAGE_NAME}
+    - docker image inspect ${IMAGE_NAME}
+  artifacts:
+    expire_in: 30 days
+    paths:
+      - container/
+
+###
+## Run container validations
+##
+container:validate:
+  tags:
+    - bronte-eng_prod-dind-generic-alpine-3-14
+  image: public.ecr.aws/docker/library/docker:20
+  services:
+    - name: public.ecr.aws/docker/library/docker:20-dind
+      alias: docker
+  stage: probe
+  needs:
+    - build:jar
+    - container:build
+  dependencies:
+    - build:jar
+    - container:build
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+    IMAGE_NAME: bronte/mercury:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+    - *run_ci_after_version_bump_commit_on_main_branch
+    - *run_ci_after_version_bump_commit_on_release_branches
+  interruptible: true
+  script:
+    - set -e
+    - apk --no-cache add jq
+    - 'mercuryFileName=$(cat jetty/build/resources/goss-vars.json | jq -r .mercuryFileName)'
+    - echo $mercuryFileName
+    # Load the container.
+    - cd container/
+    - cat container_image.tar.gz.parta* > container_image.tar.gz
+    - docker load --input container_image.tar.gz
+    - 'docker run --rm --entrypoint "" ${IMAGE_NAME} goss --vars-inline="{"mercuryFileName": "$mercuryFileName"}" validate'
+
+###
+## Perform a snyk scan.
+##
+container:scan:snyk:
+  tags:
+    - bronte-eng_prod-dind-generic-alpine-3-14
+  image: public.ecr.aws/docker/library/docker:20
+  services:
+    - name: public.ecr.aws/docker/library/docker:20-dind
+      alias: docker
+  stage: probe
+  needs:
+    - container:build
+  dependencies:
+    - container:build
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+    IMAGE_NAME: bronte/mercury:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+    - *run_ci_after_version_bump_commit_on_main_branch
+    - *run_ci_after_version_bump_commit_on_release_branches
+  interruptible: true
+  script:
+    - set -e
+    # install aws cli
+    - |
+      apk add --no-cache python3 py3-pip curl gcompat
+      pip3 install --upgrade pip
+      pip3 install --no-cache-dir awscli
+    # Load the container.
+    - cd container/
+    - cat container_image.tar.gz.parta* > container_image.tar.gz
+    - docker load --input container_image.tar.gz
+    # run snyk
+    - curl https://static.snyk.io/cli/latest/snyk-linux -o snyk
+    - chmod +x ./snyk
+    - mv ./snyk /usr/local/bin/
+    - SNYK_SECRET="$(aws secretsmanager get-secret-value --secret-id "/gocd/snyk" --region ap-southeast-2 --query "SecretString" --output text)"
+    - |
+      snyk auth ${SNYK_SECRET}
+      snyk monitor --docker "${IMAGE_NAME}" || true
+      snyk test --docker "${IMAGE_NAME}" || true
+      unset SNYK_SECRET
+
+###
+## Perform a twistlock scan.
+##
+container:scan:twistlock:
+  tags:
+    - bronte-eng_prod-dind-generic-alpine-3-14
+  image: public.ecr.aws/docker/library/docker:20
+  services:
+    - name: public.ecr.aws/docker/library/docker:20-dind
+      alias: docker
+  stage: probe
+  needs:
+    - container:build
+  dependencies:
+    - container:build
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+    IMAGE_NAME: bronte/mercury:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+    - *run_ci_after_version_bump_commit_on_main_branch
+    - *run_ci_after_version_bump_commit_on_release_branches
+  allow_failure: true
+  interruptible: true
+  script:
+    - set -e
+    # Install docker compose, and coreutils for make, split.
+    - apk add --no-cache docker-compose coreutils unzip curl jq docker
+    # install aws cli
+    - |
+      apk add --no-cache python3 py3-pip curl
+      ps aux | grep docker
+      /etc/init.d/docker start
+      pip3 install --upgrade pip
+      pip3 install --no-cache-dir awscli
+    # Load the container.
+    - cd container/
+    - cat container_image.tar.gz.parta* > container_image.tar.gz
+    - docker load --input container_image.tar.gz
+    # run twistlock
+    - TWISTLOCK_SECRET="$(aws secretsmanager get-secret-value --secret-id "/gocd/twistlock" --region ap-southeast-2 --query "SecretString" --output text)"
+    - |
+      curl -s -L -u bronte_ci:${TWISTLOCK_SECRET} https://twistlock.pearson-pso.io/api/v1/util/twistcli > twistcli
+      chmod +x twistcli
+      ./twistcli images scan --details -u bronte_ci -p "${TWISTLOCK_SECRET}" --address https://twistlock.pearson-pso.io  "${IMAGE_NAME}"
+      unset TWISTLOCK_SECRET
+
+# Run citrus tests
+#
+citrus:runner:1:
+  stage: probe
+  tags:
+    - bronte-eng_prod-dind-generic-alpine-3-14
+  image: public.ecr.aws/docker/library/docker:20
+  services:
+    - name: public.ecr.aws/docker/library/docker:20-dind
+      alias: docker
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+  needs:
+    - gradle:assemble
+    - container:build
+  dependencies:
+    - gradle:assemble
+    - container:build
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+    IMAGE_NAME: bronte/mercury:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
+  interruptible: true
+  script:
+    - set -e
+    # Load the container.
+    - cd container/
+    - cat container_image.tar.gz.parta* > container_image.tar.gz
+    - docker load --input container_image.tar.gz
+    - cd ${CI_PROJECT_DIR}
+    # Retag so that it is friendly with the compose
+    - docker tag ${IMAGE_NAME} bronte/mercury:test
+    # Install docker compose, and coreutils for make, split.
+    - apk add --no-cache docker-compose coreutils unzip curl jq
+    # install aws cli
+    - |
+      apk add --no-cache python3 py3-pip
+      pip3 install --upgrade pip
+      pip3 install --no-cache-dir awscli
+      rm -rf /var/cache/apk/*
+    # prepare folders and files to mount
+    - |
+      cd citrus/src/test/docker
+      mkdir -pv ../../../build/docker/cassandra_node1/data/
+      mkdir -pv ../../../build/docker/cassandra_node1/etc/
+      cp -v cassandra.yaml cqlshrc ../../../build/docker/cassandra_node1/etc/
+      cp -v ../../../../etc/tls/dse/sandbox/keystore.jks ../../../build/docker/cassandra_node1/etc/
+      cp -v ../../../../etc/tls/dse/sandbox/cassandra.pem ../../../build/docker/cassandra_node1/etc/
+      mkdir -pv ../../../build/docker/cassandra_init/etc/
+      cp -v cqlshrc ../../../build/docker/cassandra_init/etc/
+      cp -v ../../../../etc/tls/dse/sandbox/cassandra.pem ../../../build/docker/cassandra_init/etc/
+      cp -v ../../../../schemas/src/main/resources/cassandra/data/init-sandbox.cql ../../../build/docker/cassandra_init/
+      cp -v ../../../../schemas/src/main/resources/cassandra/data/configuration-sandbox.cql ../../../build/docker/cassandra_init/
+      cp -v ../../../../schemas/src/main/resources/cassandra/data/citrus-test-data.cql ../../../build/docker/cassandra_init/
+    # run the citrus test container, background output all the container logs.
+    - ./docker_init.sh execDocker 1
+    - cd ${CI_PROJECT_DIR}
+    - if [[ "$(ls citrus/build/reports/cucumber/ | wc -l)" == "0" ]]; then echo "Missing artifacts..."; exit 1; fi
+    - if [[ "$(ls citrus/build/logs/ | wc -l)" == "0" ]]; then echo "Missing artifacts..."; exit 1; fi
+  after_script:
+    - set -e
+    - docker ps
+    - cd citrus/src/test/docker
+    # take it down.
+    - docker-compose down
+  artifacts:
+    when: always
+    expire_in: 30 days
+    expose_as: Runner 1 Logs
+    paths:
+      - citrus/src/test/docker/cassandra_logs_1.log
+      - citrus/src/test/docker/redis_logs_1.log
+      - citrus/src/test/docker/cassandra_init_logs_1.log
+      - citrus/src/test/docker/apply_schema_logs_1.log
+      - citrus/src/test/docker/apply_config_logs_1.log
+      - citrus/src/test/docker/mercury_logs_1.log
+      - citrus/src/test/docker/citrus_simulator_logs_1.log
+      - citrus/src/test/docker/citrus_logs_1.log
+      - citrus/build/reports/cucumber/
+      - citrus/build/logs/
+
+runner:1:report:
+  stage: report
+  tags:
+    - bronte-eng_prod-fargate-openjdk-11-0-11
+  needs: [ "citrus:runner:1" ]
+  dependencies:
+    - citrus:runner:1
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+  interruptible: true
+  script:
+    - ./gradlew :citrus:generateReports
+  artifacts:
+    expire_in: 30 days
+    when: always
+    expose_as: 'Runner 1 reports'
+    paths:
+      - citrus/build/reports/
+
+citrus:runner:2:
+  stage: probe
+  tags:
+    - bronte-eng_prod-dind-generic-alpine-3-14
+  image: public.ecr.aws/docker/library/docker:20
+  services:
+    - name: public.ecr.aws/docker/library/docker:20-dind
+      alias: docker
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+  needs:
+    - gradle:assemble
+    - container:build
+  dependencies:
+    - gradle:assemble
+    - container:build
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+    IMAGE_NAME: bronte/mercury:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
+  interruptible: true
+  script:
+    - set -e
+    # Load the container.
+    - cd container/
+    - cat container_image.tar.gz.parta* > container_image.tar.gz
+    - docker load --input container_image.tar.gz
+    - cd ${CI_PROJECT_DIR}
+    # Retag so that it is friendly with the compose
+    - docker tag ${IMAGE_NAME} bronte/mercury:test
+    # Install docker compose, and coreutils for make, split.
+    - apk add --no-cache docker-compose coreutils unzip curl jq
+    # install aws cli
+    - |
+      apk add --no-cache python3 py3-pip
+      pip3 install --upgrade pip
+      pip3 install --no-cache-dir awscli
+      rm -rf /var/cache/apk/*
+    # prepare folders and files to mount
+    - |
+      cd citrus/src/test/docker
+      mkdir -pv ../../../build/docker/cassandra_node1/data/
+      mkdir -pv ../../../build/docker/cassandra_node1/etc/
+      cp -v cassandra.yaml cqlshrc ../../../build/docker/cassandra_node1/etc/
+      cp -v ../../../../etc/tls/dse/sandbox/keystore.jks ../../../build/docker/cassandra_node1/etc/
+      cp -v ../../../../etc/tls/dse/sandbox/cassandra.pem ../../../build/docker/cassandra_node1/etc/
+      mkdir -pv ../../../build/docker/cassandra_init/etc/
+      cp -v cqlshrc ../../../build/docker/cassandra_init/etc/
+      cp -v ../../../../etc/tls/dse/sandbox/cassandra.pem ../../../build/docker/cassandra_init/etc/
+      cp -v ../../../../schemas/src/main/resources/cassandra/data/init-sandbox.cql ../../../build/docker/cassandra_init/
+      cp -v ../../../../schemas/src/main/resources/cassandra/data/configuration-sandbox.cql ../../../build/docker/cassandra_init/
+      cp -v ../../../../schemas/src/main/resources/cassandra/data/citrus-test-data.cql ../../../build/docker/cassandra_init/
+    # run the citrus test container, background output all the container logs.
+    - ./docker_init.sh execDocker 2
+    - cd ${CI_PROJECT_DIR}
+    - if [[ "$(ls citrus/build/reports/cucumber/ | wc -l)" == "0" ]]; then echo "Missing artifacts..."; exit 1; fi
+    - if [[ "$(ls citrus/build/logs/ | wc -l)" == "0" ]]; then echo "Missing artifacts..."; exit 1; fi
+  after_script:
+    - cd citrus/src/test/docker
+    # take it down.
+    - docker-compose down
+  artifacts:
+    when: always
+    expire_in: 30 days
+    expose_as: Runner 2 Logs
+    paths:
+      - citrus/src/test/docker/cassandra_logs_2.log
+      - citrus/src/test/docker/redis_logs_2.log
+      - citrus/src/test/docker/cassandra_init_logs_2.log
+      - citrus/src/test/docker/apply_schema_logs_2.log
+      - citrus/src/test/docker/apply_config_logs_2.log
+      - citrus/src/test/docker/mercury_logs_2.log
+      - citrus/src/test/docker/citrus_simulator_logs_2.log
+      - citrus/src/test/docker/citrus_logs_2.log
+      - citrus/build/reports/cucumber/
+      - citrus/build/logs/
+
+runner:2:report:
+  stage: report
+  tags:
+    - bronte-eng_prod-fargate-openjdk-11-0-11
+  needs: [ "citrus:runner:2" ]
+  dependencies:
+    - citrus:runner:2
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+  interruptible: true
+  script:
+    - set -e
+    - ./gradlew :citrus:generateReports
+  artifacts:
+    expire_in: 30 days
+    when: always
+    expose_as: 'Runner 2 reports'
+    paths:
+      - citrus/build/reports/
+
+citrus:runner:3:
+  stage: probe
+  tags:
+    - bronte-eng_prod-dind-generic-alpine-3-14
+  image: public.ecr.aws/docker/library/docker:20
+  services:
+    - name: public.ecr.aws/docker/library/docker:20-dind
+      alias: docker
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+  needs:
+    - gradle:assemble
+    - container:build
+  dependencies:
+    - gradle:assemble
+    - container:build
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+    IMAGE_NAME: bronte/mercury:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
+  interruptible: true
+  script:
+    - set -e
+    # Load the container.
+    - cd container/
+    - cat container_image.tar.gz.parta* > container_image.tar.gz
+    - docker load --input container_image.tar.gz
+    - cd ${CI_PROJECT_DIR}
+    # Retag so that it is friendly with the compose
+    - docker tag ${IMAGE_NAME} bronte/mercury:test
+    # Install docker compose, and coreutils for make, split.
+    - apk add --no-cache docker-compose coreutils unzip curl jq
+    # install aws cli
+    - |
+      apk add --no-cache python3 py3-pip
+      pip3 install --upgrade pip
+      pip3 install --no-cache-dir awscli
+      rm -rf /var/cache/apk/*
+    # prepare folders and files to mount
+    - |
+      cd citrus/src/test/docker
+      mkdir -pv ../../../build/docker/cassandra_node1/data/
+      mkdir -pv ../../../build/docker/cassandra_node1/etc/
+      cp -v cassandra.yaml cqlshrc ../../../build/docker/cassandra_node1/etc/
+      cp -v ../../../../etc/tls/dse/sandbox/keystore.jks ../../../build/docker/cassandra_node1/etc/
+      cp -v ../../../../etc/tls/dse/sandbox/cassandra.pem ../../../build/docker/cassandra_node1/etc/
+      mkdir -pv ../../../build/docker/cassandra_init/etc/
+      cp -v cqlshrc ../../../build/docker/cassandra_init/etc/
+      cp -v ../../../../etc/tls/dse/sandbox/cassandra.pem ../../../build/docker/cassandra_init/etc/
+      cp -v ../../../../schemas/src/main/resources/cassandra/data/init-sandbox.cql ../../../build/docker/cassandra_init/
+      cp -v ../../../../schemas/src/main/resources/cassandra/data/configuration-sandbox.cql ../../../build/docker/cassandra_init/
+      cp -v ../../../../schemas/src/main/resources/cassandra/data/citrus-test-data.cql ../../../build/docker/cassandra_init/
+    # run the citrus test container, background output all the container logs.
+    - ./docker_init.sh execDocker 3
+    - cd ${CI_PROJECT_DIR}
+    - if [[ "$(ls citrus/build/reports/cucumber/ | wc -l)" == "0" ]]; then echo "Missing artifacts..."; exit 1; fi
+    - if [[ "$(ls citrus/build/logs/ | wc -l)" == "0" ]]; then echo "Missing artifacts..."; exit 1; fi
+  after_script:
+    - set -e
+    - cd citrus/src/test/docker
+    # take it down.
+    - docker-compose down
+  artifacts:
+    when: always
+    expire_in: 30 days
+    expose_as: Runner 3 Logs
+    paths:
+      - citrus/src/test/docker/cassandra_logs_3.log
+      - citrus/src/test/docker/redis_logs_3.log
+      - citrus/src/test/docker/cassandra_init_logs_3.log
+      - citrus/src/test/docker/apply_schema_logs_3.log
+      - citrus/src/test/docker/apply_config_logs_3.log
+      - citrus/src/test/docker/mercury_logs_3.log
+      - citrus/src/test/docker/citrus_simulator_logs_3.log
+      - citrus/src/test/docker/citrus_logs_3.log
+      - citrus/build/reports/cucumber/
+      - citrus/build/logs/
+
+runner:3:report:
+  stage: report
+  tags:
+    - bronte-eng_prod-fargate-openjdk-11-0-11
+  needs: [ "citrus:runner:3" ]
+  dependencies:
+    - citrus:runner:3
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+  interruptible: true
+  script:
+    - set -e
+    - ./gradlew :citrus:generateReports
+  artifacts:
+    expire_in: 30 days
+    when: always
+    expose_as: 'Runner 3 reports'
+    paths:
+      - citrus/build/reports/
+
+citrus:runner:4:
+  stage: probe
+  tags:
+    - bronte-eng_prod-dind-generic-alpine-3-14
+  image: public.ecr.aws/docker/library/docker:20
+  services:
+    - name: public.ecr.aws/docker/library/docker:20-dind
+      alias: docker
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+  needs:
+    - gradle:assemble
+    - container:build
+  dependencies:
+    - gradle:assemble
+    - container:build
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+    IMAGE_NAME: bronte/mercury:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
+  interruptible: true
+  script:
+    - set -e
+    # Load the container.
+    - cd container/
+    - cat container_image.tar.gz.parta* > container_image.tar.gz
+    - docker load --input container_image.tar.gz
+    - cd ${CI_PROJECT_DIR}
+    # Retag so that it is friendly with the compose
+    - docker tag ${IMAGE_NAME} bronte/mercury:test
+    # Install docker compose, and coreutils for make, split.
+    - apk add --no-cache docker-compose coreutils unzip curl jq
+    # install aws cli
+    - |
+      apk add --no-cache python3 py3-pip
+      pip3 install --upgrade pip
+      pip3 install --no-cache-dir awscli
+      rm -rf /var/cache/apk/*
+    # prepare folders and files to mount
+    - |
+      cd citrus/src/test/docker
+      mkdir -pv ../../../build/docker/cassandra_node1/data/
+      mkdir -pv ../../../build/docker/cassandra_node1/etc/
+      cp -v cassandra.yaml cqlshrc ../../../build/docker/cassandra_node1/etc/
+      cp -v ../../../../etc/tls/dse/sandbox/keystore.jks ../../../build/docker/cassandra_node1/etc/
+      cp -v ../../../../etc/tls/dse/sandbox/cassandra.pem ../../../build/docker/cassandra_node1/etc/
+      mkdir -pv ../../../build/docker/cassandra_init/etc/
+      cp -v cqlshrc ../../../build/docker/cassandra_init/etc/
+      cp -v ../../../../etc/tls/dse/sandbox/cassandra.pem ../../../build/docker/cassandra_init/etc/
+      cp -v ../../../../schemas/src/main/resources/cassandra/data/init-sandbox.cql ../../../build/docker/cassandra_init/
+      cp -v ../../../../schemas/src/main/resources/cassandra/data/configuration-sandbox.cql ../../../build/docker/cassandra_init/
+      cp -v ../../../../schemas/src/main/resources/cassandra/data/citrus-test-data.cql ../../../build/docker/cassandra_init/
+    # run the citrus test container, background output all the container logs.
+    - ./docker_init.sh execDocker 4
+    - cd ${CI_PROJECT_DIR}
+    - if [[ "$(ls citrus/build/reports/cucumber/ | wc -l)" == "0" ]]; then echo "Missing artifacts..."; exit 1; fi
+    - if [[ "$(ls citrus/build/logs/ | wc -l)" == "0" ]]; then echo "Missing artifacts..."; exit 1; fi
+  after_script:
+    - set -e
+    - cd citrus/src/test/docker
+    # take it down.
+    - docker-compose down
+  artifacts:
+    when: always
+    expire_in: 30 days
+    expose_as: Runner 4 Logs
+    paths:
+      - citrus/src/test/docker/cassandra_logs_4.log
+      - citrus/src/test/docker/redis_logs_4.log
+      - citrus/src/test/docker/cassandra_init_logs_4.log
+      - citrus/src/test/docker/apply_schema_logs_4.log
+      - citrus/src/test/docker/apply_config_logs_4.log
+      - citrus/src/test/docker/mercury_logs_4.log
+      - citrus/src/test/docker/citrus_simulator_logs_4.log
+      - citrus/src/test/docker/citrus_logs_4.log
+      - citrus/build/reports/cucumber/
+      - citrus/build/logs/
+
+runner:4:report:
+  stage: report
+  tags:
+    - bronte-eng_prod-fargate-openjdk-11-0-11
+  needs: [ "citrus:runner:4" ]
+  dependencies:
+    - citrus:runner:4
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+  interruptible: true
+  script:
+    - set -e
+    - ./gradlew :citrus:generateReports
+  artifacts:
+    expire_in: 30 days
+    when: always
+    expose_as: 'Runner 4 reports'
+    paths:
+      - citrus/build/reports/
+
+citrus:runner:5:
+  stage: probe
+  tags:
+    - bronte-eng_prod-dind-generic-alpine-3-14
+  image: public.ecr.aws/docker/library/docker:20
+  services:
+    - name: public.ecr.aws/docker/library/docker:20-dind
+      alias: docker
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+  needs:
+    - gradle:assemble
+    - container:build
+  dependencies:
+    - gradle:assemble
+    - container:build
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+    IMAGE_NAME: bronte/mercury:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
+  interruptible: true
+  script:
+    - set -e
+    # Load the container.
+    - cd container/
+    - cat container_image.tar.gz.parta* > container_image.tar.gz
+    - docker load --input container_image.tar.gz
+    - cd ${CI_PROJECT_DIR}
+    # Retag so that it is friendly with the compose
+    - docker tag ${IMAGE_NAME} bronte/mercury:test
+    # Install docker compose, and coreutils for make, split.
+    - apk add --no-cache docker-compose coreutils unzip curl jq
+    # install aws cli
+    - |
+      apk add --no-cache python3 py3-pip
+      pip3 install --upgrade pip
+      pip3 install --no-cache-dir awscli
+      rm -rf /var/cache/apk/*
+    # prepare folders and files to mount
+    - |
+      cd citrus/src/test/docker
+      mkdir -pv ../../../build/docker/cassandra_node1/data/
+      mkdir -pv ../../../build/docker/cassandra_node1/etc/
+      cp -v cassandra.yaml cqlshrc ../../../build/docker/cassandra_node1/etc/
+      cp -v ../../../../etc/tls/dse/sandbox/keystore.jks ../../../build/docker/cassandra_node1/etc/
+      cp -v ../../../../etc/tls/dse/sandbox/cassandra.pem ../../../build/docker/cassandra_node1/etc/
+      mkdir -pv ../../../build/docker/cassandra_init/etc/
+      cp -v cqlshrc ../../../build/docker/cassandra_init/etc/
+      cp -v ../../../../etc/tls/dse/sandbox/cassandra.pem ../../../build/docker/cassandra_init/etc/
+      cp -v ../../../../schemas/src/main/resources/cassandra/data/init-sandbox.cql ../../../build/docker/cassandra_init/
+      cp -v ../../../../schemas/src/main/resources/cassandra/data/configuration-sandbox.cql ../../../build/docker/cassandra_init/
+      cp -v ../../../../schemas/src/main/resources/cassandra/data/citrus-test-data.cql ../../../build/docker/cassandra_init/
+    # run the citrus test container, background output all the container logs.
+    - ./docker_init.sh execDocker 5
+    - cd ${CI_PROJECT_DIR}
+    - if [[ "$(ls citrus/build/reports/cucumber/ | wc -l)" == "0" ]]; then echo "Missing artifacts..."; exit 1; fi
+    - if [[ "$(ls citrus/build/logs/ | wc -l)" == "0" ]]; then echo "Missing artifacts..."; exit 1; fi
+  after_script:
+    - set -e
+    - cd citrus/src/test/docker
+    # take it down.
+    - docker-compose down
+  artifacts:
+    when: always
+    expire_in: 30 days
+    expose_as: Runner 5 Logs
+    paths:
+      - citrus/src/test/docker/cassandra_logs_5.log
+      - citrus/src/test/docker/redis_logs_5.log
+      - citrus/src/test/docker/cassandra_init_logs_5.log
+      - citrus/src/test/docker/apply_schema_logs_5.log
+      - citrus/src/test/docker/apply_config_logs_5.log
+      - citrus/src/test/docker/mercury_logs_5.log
+      - citrus/src/test/docker/citrus_simulator_logs_5.log
+      - citrus/src/test/docker/citrus_logs_5.log
+      - citrus/build/reports/cucumber/
+      - citrus/build/logs/
+
+runner:5:report:
+  stage: report
+  tags:
+    - bronte-eng_prod-fargate-openjdk-11-0-11
+  needs: [ "citrus:runner:5" ]
+  dependencies:
+    - citrus:runner:5
+  rules:
+    - *run_job_manually_on_random_branches
+    - *run_on_mr_to_main_branch
+    - *run_on_mr_to_release_branches
+  interruptible: true
+  script:
+    - set -e
+    - ./gradlew :citrus:generateReports
+  artifacts:
+    expire_in: 30 days
+    when: always
+    expose_as: 'Runner 5 reports'
+    paths:
+      - citrus/build/reports/
+
+##
+## Run lint on the Dockerfile.
+##
+## TODO: format output and lift into gitlab as gitlab_codeclimate ?
+##
+#dockerfile_lint:
+#  tags:
+#    - bronte-eng_prod-dind-generic-alpine-3-14
+#  stage: test
+#  rules:
+#    - *run_for_all
+#  interruptible: true
+#  script:
+#    - set -e
+#    - docker pull hadolint/hadolint:latest-debian
+#    # Ignore:
+#    #   DL3018 Pin versions in apk add
+#    - docker run --rm -i hadolint/hadolint hadolint --ignore DL3018 --verbose --format gitlab_codeclimate - < jetty/Dockerfile && echo "lint ok"
+###
+
+
+# Scan repository for secrets
+# TODO: 
+#   - use this instead? https://docs.gitlab.com/ee/user/application_security/secret_detection/index.html
+#   - surface the results up into gitlab.
+#secrets-scan:
+#  stage: probe
+#  interruptible: true
+#  tags:
+#    - bronte-eng_prod-dind-generic-alpine-3-14
+#  image: public.ecr.aws/docker/library/docker:20
+#  services:
+#    - name: public.ecr.aws/docker/library/docker:20-dind
+#      alias: docker
+#  rules:
+#    - *run_for_MR
+#  variables:
+#    DOCKER_DRIVER: overlay2
+#    DOCKER_TLS_CERTDIR: ""
+#  script:
+#    - set -e
+#    # Run secrets scan using gitleaks, current codebase only and not the whole git history.
+#    - docker run --volume $PWD:/repo:ro zricethezav/gitleaks --source=/repo --verbose
+
+###
+## Static Application Security Testing
+##
+##.sast_scan:
+##  stage: probe
+##  rules:
+##    - *run_for_MR
+##    - *run_for_main
+##  interruptible: true
+##  script:
+##    - set -e
+##    # Run a CheckMarx SAST Scan
+##    - curl -s -L https://download.checkmarx.com/9.0.0/Plugins/CxConsolePlugin-2020.2.3.zip -o CxConsolePlugin-2020.2.3.zip && unzip CxConsolePlugin-2020.2.3.zip
+##    - docker run --volume $PWD:/repo:rw -w /repo amazoncorretto:latest bash runCxConsole.sh Scan -v -CxServer ${CxServer} -projectName ${CxProjectName} -CxUser ${CxUser} -CxPassword ${CxPassword} -Locationtype folder -locationpath /repo -Preset "Checkmarx Default"
+###
+## Twistlock scan
+##
+## TODO: surface the results up into gitlab.
+## TODO: make this work; need consistent container name!
+##
+#twistcli_scan:
+#  tags:
+#    - bronte-generic
+#  stage: probe
+#  rules:
+#    - *run_for_MR
+#    - *run_for_main
+#  interruptible: true
+#  script:
+#    - set -e
+#    - if [[ -z ${TWISTLOCK_USER} ]]; then echo "Error - Please set ENV variable TWISTLOCK_USER."; exit 1; fi
+#    - if [[ -z ${TWISTLOCK_PASSWORD} ]]; then echo "Error - Please set ENV variable TWISTLOCK_PASSWORD."; exit 1; fi
+##    # Download twistcli
+#    - |
+#      curl -s -L -u ${TWISTLOCK_USER}:${TWISTLOCK_PASSWORD} https://twistlock.pearson-pso.io/api/v1/util/twistcli > ./twistcli
+#      chmod +x ./twistcli
+#      ./twistcli  --version
+#      
+#    # Load container and scan.
+#    - |
+#      docker load --input container_image.tar.gz
+#      ./twistcli images scan --details -u ${TWISTLOCK_USER} -p "${TWISTLOCK_PASSWORD}" --address https://twistlock.pearson-pso.io  FIXME_CONTAINER_NAME
+### #
+## # artifacts % size check / warning (to see if things double or triple in size, etc.)
+## # TODO: pull the "latest" docker image and compare size.
+## #
+## .size_check:
+##   stage: probe
+##   rules:
+##     - *run_for_MR
+##     - *run_for_main
+##   interruptible: true
+##   script:
+##     - set -e
+##     - echo "fail" && exit 1
+##
+
+#
+# Increase the version for main releases;
+#
+version:bump:
+  stage: build
+  tags:
+    - bronte-eng_prod-fargate-generic-alpine-3-14
+  rules:
+    - *run_version_bump_on_main_branch
+    - *run_version_bump_on_release_branches
+  script:
+    - set -e
+    - set -x
+    # get the current version from the gradle.properties file
+    - current_version=$(grep -oE "=.*" gradle.properties | cut -c 2-)
+    - major_version=$(echo ${current_version} | cut -d '.' -f 1)
+    - minor_version=$(echo ${current_version} | cut -d '.' -f 2)
+    - patch_version=$(echo ${current_version} | cut -d '.' -f 3)
+    # find out if the commit message has breaking changes
+    - breaking_change=$(echo "${CI_COMMIT_MESSAGE}" | grep "BREAKING CHANGE" -oi) &&
+    # get the prefix type (fix:, feat: or chore:) the regex matches any word before ':' including
+    - prefix_type=$(echo "${CI_COMMIT_MESSAGE}" | grep -E "(\S+)\s*:" -o | rev | cut -c 2- | rev | cat) &&
+    - if [ "$prefix_type" = "chore" ] && [ "$breaking_change" = "" ]; then patch_version=$(($patch_version + 1)); fi
+    - if [ "$prefix_type" = "fix" ] && [ "$breaking_change" = "" ]; then patch_version=$(($patch_version + 1)); fi
+    - if [ "$prefix_type" = "feat" ] && [ "$breaking_change" = "" ]; then minor_version=$(($minor_version + 1)); fi
+    - if [ "$prefix_type" = "" ] && [ "$breaking_change" = "" ]; then patch_version=$(($patch_version + 1)); fi
+    - if [ "$breaking_change" = "BREAKING CHANGE" ]; then major_version=$(($major_version + 1)); fi
+    # now let's rebuild the version and save it to the gradle properties file
+    - new_version="$major_version.$minor_version.$patch_version.${CI_COMMIT_BRANCH}"
+    - sed -i -e "s|$current_version|$new_version|g" gradle.properties
+    # since there has been a file change, commit those changes to the repo and push
+    - 'if [ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]; then branch="$(echo $CI_DEFAULT_BRANCH | tr [:lower:] [:upper:])"; else branch="REL"; fi'
+    - echo "Preparing to push"
+    - git config user.name "serv.gitlab"
+    - git config user.email "serv.gitlab@gitlab.registry.token"
+    - git add -A
+    - 'git commit -m "chore: ${branch} Bump up version to ${new_version}"'
+    - 'git push https://gitlab-ci-token:$(aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:ap-southeast-2:585397755241:secret:/gocd/gitlab" --region ap-southeast-2 | jq -r .SecretString | jq -r ."oauth_token")@gitlab.com/pearsontechnology/gpt/bronte/service/bronte-service-mercury.git HEAD:${CI_COMMIT_BRANCH}'
+    - echo "${branch} Version updated to ${new_version}"
+
+#
+# Publish the container to ENG_PROD ECR;
+#
+publish:container:
+  stage: pre_release
+  tags:
+    - bronte-eng_prod-dind-generic-alpine-3-14
+  image: public.ecr.aws/docker/library/docker:20
+  services:
+    - name: public.ecr.aws/docker/library/docker:20-dind
+      alias: docker
+  needs:
+    - container:build
+  dependencies:
+    - container:build
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+    IMAGE_NAME: bronte/mercury:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
+  rules:
+    - *run_ci_after_version_bump_commit_on_main_branch
+    - *run_ci_after_version_bump_commit_on_release_branches
+  script:
+    - set -e
+    - echo "Publish the tagged image to the ENG ecr"
+    - CURRENT_VERSION=$(grep -oE "=.*" gradle.properties | cut -c 2-)
+    - ECR_URI=585397755241.dkr.ecr.ap-southeast-2.amazonaws.com
+    # Load the container.
+    - cd container/
+    - cat container_image.tar.gz.parta* > container_image.tar.gz
+    - docker load --input container_image.tar.gz
+    # Publish to defined ECR.
+    - |
+     # Authenticate to the ECR
+     docker run --rm amazon/aws-cli ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin $ECR_URI/services/mercury
+     # Tag the image.
+     docker tag $IMAGE_NAME $ECR_URI/services/mercury:$CURRENT_VERSION
+     # Push the image to the repo.
+     docker push $ECR_URI/services/mercury:$CURRENT_VERSION
+
+generate:DEV:pipeline:
+  stage: pre_release
+  tags:
+    - bronte-eng_prod-fargate-generic-alpine-3-14
+  needs:
+    - publish:container
+  dependencies:
+    - publish:container
+  rules:
+    - *run_ci_after_version_bump_commit_on_main_branch
+  interruptible: true
+  script:
+    - set -e
+    - CURRENT_VERSION=$(grep -oE "=.*" gradle.properties | cut -c 2-)
+    - echo "generate the deploy pipelines"
+    - apk add m4
+    - m4 -D VAR_WHEN=on_success -D VAR_CI_PIPELINE_ID=$CI_PIPELINE_ID -D VAR_CI_COMMIT_REF_NAME=$CI_COMMIT_REF_NAME -D VAR_CURRENT_VERSION=$CURRENT_VERSION -D VAR_ENV=dev   -D VAR_ACCOUNT_ID=716062133555 -D VAR_REGION=ap-southeast-2 -D VAR_GENERIC_ALPINE_RUNNER=bronte-dev-fargate-generic-alpine-3-14   -D VAR_CQLSH_RUNNER=bronte-dev-fargate-cqlsh-5-0-4   -D VAR_OPENJDK_RUNNER=bronte-dev-fargate-openjdk-11-0-11   -D VAR_TERRAFORM_RUNNER=bronte-dev-fargate-terraform-1-0-0   -D VAR_TERRAFORM_LEGACY_RUNNER=bronte-dev-fargate-terraform-0-11-11   -D VAR_CASSANDRA_ENDPOINT=10.87.16.11 -D VAR_CASSANDRA_GATEWAY=cassandra-gateway-dev.ap-southeast-2.gitlab.internal template-deploy.gitlab-ci.yml > deploy-to-dev.yml
+  artifacts:
+    paths:
+      - deploy-to-dev.yml
+
+deploy:DEV:
+  stage: validate
+  trigger:
+    include:
+      - artifact: deploy-to-dev.yml
+        job: generate:DEV:pipeline
+    strategy: depend
+  rules:
+    - *run_ci_after_version_bump_commit_on_main_branch
+
+tag:release:to:upper:envs:
+  stage: release
+  tags:
+    - bronte-eng_prod-fargate-generic-alpine-3-14
+  rules:
+    - *run_ci_after_version_bump_commit_on_release_branches
+  interruptible: true
+  script:
+    - set -e
+    - CURRENT_VERSION=$(grep -oE "=.*" gradle.properties | cut -c 2-)
+    - echo "Tagging commit $CI_COMMIT_SHA for release of version $CURRENT_VERSION"
+    - echo "Preparing to push"
+    - git config user.name "serv.gitlab"
+    - git config user.email "serv.gitlab@gitlab.registry.token"
+    - 'if [ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]; then branch="$(echo $CI_DEFAULT_BRANCH | tr [:lower:] [:upper:])"; else branch="REL"; fi'
+    - 'git tag -a v$CURRENT_VERSION $CI_COMMIT_SHA -m "chore: ${branch} Create tag version $CURRENT_VERSION"'
+    - 'GITLAB_TOKEN=$(aws secretsmanager get-secret-value --secret-id "arn:aws:secretsmanager:ap-southeast-2:585397755241:secret:/gocd/gitlab" --region ap-southeast-2 | jq -r .SecretString | jq -r ."oauth_token")'
+    - 'git push https://gitlab-ci-token:${GITLAB_TOKEN}@gitlab.com/pearsontechnology/gpt/bronte/service/bronte-service-mercury.git HEAD:${CI_COMMIT_BRANCH} --tags "v$CURRENT_VERSION"'
+    - unset GITLAB_TOKEN
+
+generate:upper:envs:pipelines:
+  stage: release
+  tags:
+    - bronte-eng_prod-fargate-generic-alpine-3-14
+  rules:
+    - *run_ci_after_version_bump_commit_on_release_branches
+  needs:
+    - tag:release:to:upper:envs
+  dependencies:
+    - tag:release:to:upper:envs
+  interruptible: true
+  script:
+    - set -e
+    - CURRENT_VERSION=$(grep -oE "=.*" gradle.properties | cut -c 2-)
+    - echo "Generating pipelines for tag version $CURRENT_VERSION"
+    - apk add m4
+    - m4 -D VAR_WHEN=manual -D VAR_CI_PIPELINE_ID=$CI_PIPELINE_ID -D VAR_CI_COMMIT_REF_NAME=$CI_COMMIT_REF_NAME -D VAR_CURRENT_VERSION=$CURRENT_VERSION -D VAR_ENV=qaint -D VAR_ACCOUNT_ID=658380148811 -D VAR_REGION=us-east-1      -D VAR_GENERIC_ALPINE_RUNNER=bronte-qaint-fargate-generic-alpine-3-14 -D VAR_CQLSH_RUNNER=bronte-qaint-fargate-cqlsh-5-0-4 -D VAR_OPENJDK_RUNNER=bronte-qaint-fargate-openjdk-11-0-11 -D VAR_TERRAFORM_RUNNER=bronte-qaint-fargate-terraform-1-0-0 -D VAR_TERRAFORM_LEGACY_RUNNER=bronte-qaint-fargate-terraform-0-11-11 -D VAR_CASSANDRA_ENDPOINT=10.82.78.12 -D VAR_CASSANDRA_GATEWAY=cassandra-gateway-qaint.us-east-1.gitlab.internal    template-deploy.gitlab-ci.yml > deploy-to-qaint.yml
+    - m4 -D VAR_WHEN=manual -D VAR_CI_PIPELINE_ID=$CI_PIPELINE_ID -D VAR_CI_COMMIT_REF_NAME=$CI_COMMIT_REF_NAME -D VAR_CURRENT_VERSION=$CURRENT_VERSION -D VAR_ENV=ppe   -D VAR_ACCOUNT_ID=443982649941 -D VAR_REGION=us-east-1      -D VAR_GENERIC_ALPINE_RUNNER=bronte-ppe-fargate-generic-alpine-3-14   -D VAR_CQLSH_RUNNER=bronte-ppe-fargate-cqlsh-5-0-4   -D VAR_OPENJDK_RUNNER=bronte-ppe-fargate-openjdk-11-0-11   -D VAR_TERRAFORM_RUNNER=bronte-ppe-fargate-terraform-1-0-0   -D VAR_TERRAFORM_LEGACY_RUNNER=bronte-ppe-fargate-terraform-0-11-11   -D VAR_CASSANDRA_ENDPOINT=10.82.79.8  -D VAR_CASSANDRA_GATEWAY=cassandra-gateway-ppe.us-east-1.gitlab.internal      template-deploy.gitlab-ci.yml > deploy-to-ppe.yml
+    - m4 -D VAR_WHEN=manual -D VAR_CI_PIPELINE_ID=$CI_PIPELINE_ID -D VAR_CI_COMMIT_REF_NAME=$CI_COMMIT_REF_NAME -D VAR_CURRENT_VERSION=$CURRENT_VERSION -D VAR_ENV=stg   -D VAR_ACCOUNT_ID=324267317821 -D VAR_REGION=us-east-1      -D VAR_GENERIC_ALPINE_RUNNER=bronte-stg-fargate-generic-alpine-3-14   -D VAR_CQLSH_RUNNER=bronte-stg-fargate-cqlsh-5-0-4   -D VAR_OPENJDK_RUNNER=bronte-stg-fargate-openjdk-11-0-11   -D VAR_TERRAFORM_RUNNER=bronte-stg-fargate-terraform-1-0-0   -D VAR_TERRAFORM_LEGACY_RUNNER=bronte-stg-fargate-terraform-0-11-11   -D VAR_CASSANDRA_ENDPOINT=10.82.80.33 -D VAR_CASSANDRA_GATEWAY=cassandra-gateway-stg.us-east-1.gitlab.internal      template-deploy.gitlab-ci.yml > deploy-to-stg.yml
+    - m4 -D VAR_WHEN=manual -D VAR_CI_PIPELINE_ID=$CI_PIPELINE_ID -D VAR_CI_COMMIT_REF_NAME=$CI_COMMIT_REF_NAME -D VAR_CURRENT_VERSION=$CURRENT_VERSION -D VAR_ENV=prod  -D VAR_ACCOUNT_ID=591900134539 -D VAR_REGION=us-west-1      -D VAR_GENERIC_ALPINE_RUNNER=bronte-prod-fargate-generic-alpine-3-14  -D VAR_CQLSH_RUNNER=bronte-prod-fargate-cqlsh-5-0-4  -D VAR_OPENJDK_RUNNER=bronte-prod-fargate-openjdk-11-0-11  -D VAR_TERRAFORM_RUNNER=bronte-prod-fargate-terraform-1-0-0  -D VAR_TERRAFORM_LEGACY_RUNNER=bronte-prod-fargate-terraform-0-11-11  -D VAR_CASSANDRA_ENDPOINT=10.82.39.8  -D VAR_CASSANDRA_GATEWAY=cassandra-gateway-prod.us-west-1.gitlab.internal     template-deploy.gitlab-ci.yml > deploy-to-prod.yml
+  artifacts:
+    paths:
+      - deploy-to-qaint.yml
+      - deploy-to-ppe.yml
+      - deploy-to-stg.yml
+      - deploy-to-prod.yml
+
+deploy:QAINT:
+  stage: uat
+  trigger:
+    include:
+      - artifact: deploy-to-qaint.yml
+        job: generate:upper:envs:pipelines
+    strategy: depend
+  rules:
+    - *run_ci_after_version_bump_commit_on_release_branches
+
+deploy:PPE:
+  stage: uat
+  trigger:
+    include:
+      - artifact: deploy-to-ppe.yml
+        job: generate:upper:envs:pipelines
+    strategy: depend
+  rules:
+    - *run_ci_after_version_bump_commit_on_release_branches
+
+deploy:STG:
+  stage: stage
+  trigger:
+    include:
+      - artifact: deploy-to-stg.yml
+        job: generate:upper:envs:pipelines
+    strategy: depend
+  rules:
+    - *run_ci_after_version_bump_commit_on_release_branches
+
+deploy:PROD:
+  stage: promote
+  trigger:
+    include:
+      - artifact: deploy-to-prod.yml
+        job: generate:upper:envs:pipelines
+    strategy: depend
+  rules:
+    - *run_ci_after_version_bump_commit_on_release_branches

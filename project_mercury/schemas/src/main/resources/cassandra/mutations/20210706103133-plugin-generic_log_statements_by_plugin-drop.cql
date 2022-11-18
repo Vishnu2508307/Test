@@ -1,0 +1,1 @@
+DROP TABLE plugin.generic_log_statements_by_plugin;

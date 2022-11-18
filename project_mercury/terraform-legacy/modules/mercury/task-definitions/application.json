@@ -1,0 +1,94 @@
+[
+  {
+    "name": "${container_name}",
+    "image": "${image}",
+    "essential": true,
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-region": "${aws_region_logs}",
+        "awslogs-group": "${aws_log_group}",
+        "awslogs-stream-prefix": "${ecs_cluster}"
+      }
+    },
+    "portMappings": [{
+        "containerPort": ${container_port},
+        "hostPort": ${host_port},
+        "protocol": "tcp"
+    }],
+    "environment": [
+      {
+        "name": "ENV_REGION",
+        "value": "${env_region}"
+      },
+      {
+        "name": "AWS_REGION",
+        "value": "${region}"
+      },
+      {
+        "name": "CASSANDRA_CONTACTPOINTS",
+        "value": "${cassandra_contactpoints}"
+      },
+      {
+        "name": "CASSANDRA_AUTHENTICATION_USERNAME",
+        "value": "${cassandra_authentication_username}"
+      },
+      {
+        "name": "FETCH_TRUSTSTORE_PROVIDER",
+        "value": "${fetch_truststore_provider}"
+      },
+      {
+        "name": "FETCH_TRUSTSTORE_SOURCE_PATH",
+        "value": "${fetch_truststore_source_path}"
+      },
+      {
+        "name": "APM_ENABLED",
+        "value": "${apm_enabled}"
+      },
+      {
+        "name": "APM_APP_NAME",
+        "value": "${apm_app_name}"
+      }
+    ],
+    "secrets": [
+      {
+        "name": "CASSANDRA_AUTHENTICATION_PASSWORD",
+        "valueFrom": "arn:aws:secretsmanager:${region}:${account_id}:secret:${cassandra_authentication_password}"
+      },
+      {
+        "name": "CASSANDRA_KEYSTORE_PASSWORD",
+        "valueFrom": "arn:aws:secretsmanager:${region}:${account_id}:secret:${cassandra_keystore_password}"
+      },
+      {
+        "name": "NEW_RELIC_LICENSE_KEY",
+        "valueFrom": "arn:aws:secretsmanager:${region}:${account_id}:secret:/${env}/mercury/newrelic"
+      }
+    ],
+    "ulimits": [
+      {
+        "name": "memlock",
+        "softLimit": -1,
+        "hardLimit": -1
+      }
+    ],
+    "tags": [
+      {
+        "key": "t_AppID",
+        "value": "${app_id}"
+      },
+      {
+        "key": "t_cost_centre",
+        "value": "${cost_centre}"
+      },
+      {
+        "key": "t_environment",
+        "value": "${environment}"
+      },
+      {
+        "key": "t_dcl",
+        "value": "${dcl}"
+      }
+    ],
+    "volumesFrom": []
+  }
+]

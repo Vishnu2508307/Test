@@ -1,0 +1,447 @@
+/**
+ * Cassandra schema tasks
+ */
+def GROUP_CASSANDRA = 'Schema Management - Cassandra'
+
+//
+buildscript {
+    apply from: "${rootDir}/repositories.gradle"
+    repositories repos
+
+    dependencies {
+        //it is duplicated in schemas.gradle to avoid error in IntelliJ IDEA
+        classpath 'com.datastax.cassandra:cassandra-driver-core:3.6.0'
+        classpath 'io.netty:netty-tcnative-boringssl-static:2.0.34.Final'
+        classpath 'org.yaml:snakeyaml:1.20'
+    }
+}
+//
+import com.datastax.driver.core.*
+import io.netty.handler.ssl.SslContextBuilder
+import io.netty.handler.ssl.SslProvider
+import org.yaml.snakeyaml.Yaml
+import javax.net.ssl.TrustManagerFactory;
+import java.security.KeyStore;
+
+// basic common paths / setttings.
+ext {
+    // changelog paths.
+    changelog_base_path = 'src/main/resources/cassandra-changelog'
+    changelog_keyspaces = changelog_base_path + '/keyspaces'
+    changelog_mutations = changelog_base_path + '/mutations'
+
+    // cassandra paths.
+    cassandra_base_path = 'src/main/resources/cassandra'
+    cassandra_keyspaces = cassandra_base_path + '/keyspaces'
+    cassandra_mutations = cassandra_base_path + '/mutations'
+}
+
+// helper to consistently output a file is written.
+def notifyFileWritten = { filename ->
+    logger.lifecycle( "please edit the following file:\n$filename" )
+}
+
+// helper to log executed queries consistently.
+def logQuery = { query, prefix = "" ->
+    // strip comments (only support --)
+    def oneliner = query.replaceAll(/(?m)^--.*/, '')
+    // strip newlines, collapse excess spaces to single spaces
+                        .replaceAll(/(?m)\n*/, '')
+                        .replaceAll(/\s\s+/, ' ')
+    // some text cleanups due to above regex
+                        .replaceAll(/\)WITH/, ') WITH')
+
+    logger.warn("${prefix}${oneliner}")
+    return oneliner
+}
+
+// define the keyspace sample.
+def keyspace_sample = {keyspace -> """\
+#
+# Write a short description about what this keyspace intends to record
+#
+keyspace: $keyspace
+replication:
+    local: 
+        class: NetworkTopologyStrategy
+        datacenters:
+            - Cassandra: 1
+#           - Analytics: 1
+    sandbox: 
+        class: NetworkTopologyStrategy
+        datacenters:
+            - ap-southeast-2: 1
+    dev: 
+        class: NetworkTopologyStrategy
+        datacenters:
+            - AWS_VPC_AP_SOUTHEAST_2: 3
+    qaint: 
+        class: NetworkTopologyStrategy
+        datacenters:
+            - AWS_VPC_US_EAST_1: 3
+    ppe: 
+        class: NetworkTopologyStrategy
+        datacenters:
+            - AWS_VPC_US_EAST_1: 3
+    stg: 
+        class: NetworkTopologyStrategy
+        datacenters:
+            - AWS_VPC_US_EAST_1: 3
+    prod:
+        class: NetworkTopologyStrategy
+        datacenters:
+            - AWS_VPC_US_WEST_1: 3
+"""}
+
+// define the create table sample.
+def create_table_sample = { keyspace, table -> """\
+--
+-- ${keyspace}.${table}
+-- --------------------
+-- Write a short description about the intention of this table.
+--
+-- Write a description of the query that this table supports
+-- > SELECT * FROM ${keyspace}.${table} WHERE ...
+--
+CREATE TABLE IF NOT EXISTS ${keyspace}.${table} (
+    column_definition,
+    column_definition,
+    ...    
+)
+WITH compression = { 
+    'sstable_compression' : 'SnappyCompressor'
+};
+"""}
+
+// define the alter table sample.
+def alter_table_sample = { keyspace, table -> """\
+ALTER TABLE $keyspace.$table
+  ALTER column_name TYPE cql_type
+  ADD column_name cql_type
+  DROP column_name
+  RENAME column_name TO column_name
+  WITH property AND property ...
+;
+"""}
+
+// wrap and run the closure in a cassandra session.
+def onCassandra = { envConfig, closure ->
+
+    FileInputStream tsf = null
+
+    try {
+        // build a cluster.
+        logger.info( "> Connecting to cluster on ${envConfig.cassandra.authentication.username}@${envConfig.cassandra.contactPoint}:9042" )
+        def sslOptions = buildSslOptions(envName)
+        Cluster cluster = Cluster.builder()
+            .withSSL(sslOptions)
+            .addContactPoint(envConfig.cassandra.contactPoint)
+            .withCredentials(envConfig.cassandra.authentication.username, envConfig.cassandra.authentication.password)
+            .withQueryOptions(new QueryOptions().setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM))
+            .withSocketOptions(new SocketOptions().setReadTimeoutMillis(25000))
+            .build()
+        // connect/build the session.
+        Session session = cluster.connect()
+
+        // run!
+        closure(session)
+
+        logger.info( "< Disconnecting from ${envConfig.cassandra.contactPoint}" )
+        session.close()
+        cluster.close()
+    } catch (com.datastax.driver.core.exceptions.NoHostAvailableException ex) {
+        logger.error("ERROR details " + ex.getErrors())
+        throw ex;
+    } finally {
+        if( tsf != null ) {
+            tsf.close()
+        }
+    }
+}
+
+RemoteEndpointAwareNettySSLOptions buildSslOptions(String envName) {
+    KeyStore ks = KeyStore.getInstance("JKS")
+    String storePass = System.getenv("CASSANDRA_TRUSTSTORE_PASSWORD") //System.getProperty("cassandra.truststore.pass", envName.startsWith("prod") ? "instaclustr" : "cassandra")
+    String storePath = "${projectDir}/../etc/tls/dse/$envName/truststore.jks"
+    InputStream store = new FileInputStream(storePath)
+    if(store == null) {
+        logger.error("ERROR: Unable to load cassandra truststore from filesystem path $storePath")
+    }
+    ks.load(store, storePass.toCharArray());
+    TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+    tmf.init(ks);
+    SslContextBuilder builder = SslContextBuilder.forClient()
+            .sslProvider(SslProvider.OPENSSL)
+            .trustManager(tmf)
+    return new RemoteEndpointAwareNettySSLOptions(builder.build())
+}
+
+// get a set of the current keyspace names.
+def getKeyspaces = { session ->
+    Set<String> currentKeyspaces = new HashSet<String>()
+
+    session.getCluster().getMetadata().getKeyspaces().each{ it ->
+        currentKeyspaces << it.name
+    }
+    currentKeyspaces
+}
+
+
+
+
+// get a set of the ids in the changelog.
+def getAppliedChanges = { session ->
+    Set<String> appliedChanges = new HashSet<String>()
+
+    // this will error if the keyspace doesn't exist yet (i.e. bootstrapping)
+    ResultSet resultSet = session.execute( "SELECT id, on_keyspace, on_table FROM changelog.db" )
+    resultSet.all().each { row ->
+        String changeId = row.getString("id")
+        appliedChanges << changeId
+    }
+
+    return appliedChanges
+}
+
+// build a list of keyspace mutations.
+def buildKeyspaceMutations = { environmentName, existingKeyspaces, keyspaceFiles, updateReplicationMap ->
+
+    def mutations = []
+    // take them in sorted order.
+    keyspaceFiles.sort().each { keyspaceFile ->
+
+        // read the yaml config.
+        def keyspaceConfig = new Yaml().load(keyspaceFile.newReader())
+
+        // check if keyspace exists
+        def keyspaceExists = keyspaceConfig.keyspace in existingKeyspaces
+
+        def buildReplicationMapString = { config ->
+            List<String> opts = new ArrayList<String>()
+            config.each { k, v ->
+                if( k == 'datacenters' ) {
+                    // this is deseralized as a Map<Map<String,String>>
+                    v.each { entry ->
+                        entry.each { dcName, dcRepl ->
+                            opts << "'$dcName' : '$dcRepl'"
+                        }
+                    }
+                } else {
+                    opts << "'$k' : '$v'"
+                }
+            }
+
+            String ret = opts.join(", ")
+            logger.info("converted keyspace replication config to: $ret")
+            return "{ " + ret + "}"
+        }
+
+        // create it?
+        if( keyspaceExists ) {
+            // if forced, then issue an alter.
+            if( updateReplicationMap ) {
+                def query = """ALTER KEYSPACE ${keyspaceConfig.keyspace} 
+                               WITH REPLICATION = ${buildReplicationMapString(keyspaceConfig.replication.get(environmentName))};"""
+                mutations << query
+            }
+        } else {
+            def query = """CREATE KEYSPACE ${keyspaceConfig.keyspace} 
+                           WITH REPLICATION = ${buildReplicationMapString(keyspaceConfig.replication.get(environmentName))};"""
+            mutations << query
+        }
+    }
+
+    return mutations
+}
+
+// given the set of files, create the mutations which need to be executed.
+def buildCQLMutations = { appliedChanges, cqlFiles ->
+    def mutations = []
+    // take them in sorted order.
+    cqlFiles.sort().each { cqlFile ->
+
+        // get the basename (strip .cql)
+        def basename = cqlFile.name.lastIndexOf('.').with {it != -1 ? cqlFile.name[0..<it] : cqlFile.name}
+
+        // split the filename
+        def (key, keyspace, table) = basename.tokenize('-')
+
+        // check if the change has been applied.
+        def changePreviouslyApplied = key in appliedChanges
+
+        // create the change and log it.
+        if( changePreviouslyApplied ) {
+            logger.debug("skipping change: $cqlFile.name")
+        } else {
+            logger.debug("accepted change: $cqlFile.name")
+
+            def query = "INSERT INTO changelog.db (id, on_keyspace, on_table) VALUES ('${key}', '${keyspace}', '${table}');"
+
+            mutations << cqlFile.getText('UTF-8')
+            mutations << query
+        }
+
+        logger.info("processing $key " + cqlFile.name)
+    }
+
+    return mutations
+}
+
+// should the changelog keyspace/tables be run?
+def bootstrapChangelog = { session ->
+    FileTree keyspaceFiles = fileTree(dir: changelog_keyspaces, include: '**/*.yaml')
+    FileTree cqls = fileTree(dir: changelog_mutations, include: '**/*.cql')
+    def updateReplicationMap = project.hasProperty('updateReplicationMap') ?: false
+
+    def mutations = []
+    def existingKeyspaces = getKeyspaces(session)
+    def appliedChanges = []
+
+    // this is a special case here, the underlying changelog keyspace and table record may not exist.
+    def metadata = session.getCluster().getMetadata().getKeyspace('changelog');
+    if( metadata && metadata.getTable('db')) {
+        appliedChanges = getAppliedChanges(session)
+    }
+
+    mutations += buildKeyspaceMutations(envName, existingKeyspaces, keyspaceFiles, updateReplicationMap)
+    mutations += buildCQLMutations(appliedChanges, cqls)
+
+    mutations.each { mutation ->
+        session.execute( logQuery(mutation, "+ ") )
+    }
+}
+
+// helper to build the necessary db mutations.
+//  param: onEachMutation - the closure to callback to process each mutation.
+def buildCassandraMutations = { onEachMutation ->
+
+    readEnvConfig()
+    FileTree keyspaceFiles = fileTree(dir: cassandra_keyspaces, include: '**/*.yaml')
+    FileTree cqls = fileTree(dir: cassandra_mutations, include: '**/*.cql')
+    def updateReplicationMap = project.hasProperty('updateReplicationMap') ?: false
+
+    //
+    wrapInSSHTunnelAsNeeded(envConfig, {
+        onCassandra(envConfig, {session ->
+
+            bootstrapChangelog(session)
+
+            def mutations = []
+            def existingKeyspaces = getKeyspaces(session)
+            def appliedChanges = getAppliedChanges(session)
+
+            mutations += buildKeyspaceMutations(envName, existingKeyspaces, keyspaceFiles, updateReplicationMap)
+            mutations += buildCQLMutations(appliedChanges, cqls)
+
+            mutations.each { mutation ->
+                onEachMutation( session, mutation )
+            }
+        })
+    })
+}
+
+
+
+//
+// -------- TASKS --------
+//
+
+
+/**
+ * create the necessary keyspace and tables to manage the changelog tracking.
+ */
+task createCassandraChangelog( description: 'Create the changelog tracking schema for Cassandra; use -Penvironment=env_name',
+                               group: GROUP_CASSANDRA ) {
+    doLast {
+        readEnvConfig()
+        //
+        wrapInSSHTunnelAsNeeded(envConfig, {
+            onCassandra(envConfig, { session ->
+                bootstrapChangelog(session)
+            })
+        })
+    }
+}
+
+/**
+ * create a yaml file containing a new keyspace snippet.
+ */
+task createCassandraKeyspace( description: 'Create a new Cassandra keyspace; use -Pkeyspace=keyspace_name',
+                              group: GROUP_CASSANDRA ) {
+    doLast {
+        checkProjectProperty('keyspace', 'keyspace_name')
+
+        def timestamp = new Date().format('yyyyMMddHHmmss')
+        def outFile = "${cassandra_keyspaces}/${timestamp}-${keyspace}.yaml"
+
+        mkdir(cassandra_keyspaces)
+        File f = file(outFile)
+        f.write(keyspace_sample(keyspace))
+        notifyFileWritten(f)
+    }
+}
+
+/**
+ * create a cql file containing a create table snippet.
+ */
+task createCassandraTable( description: 'Create a Cassandra table; use -Pkeyspace=keyspace_name -Ptable=table_name',
+                              group: GROUP_CASSANDRA ) {
+    doLast {
+        checkProjectProperty('keyspace', 'keyspace_name')
+        checkProjectProperty('table', 'table_name')
+
+        def timestamp = new Date().format('yyyyMMddHHmmss')
+        def outFile = "${cassandra_mutations}/${timestamp}-${keyspace}-${table}.cql"
+
+        mkdir(cassandra_mutations)
+        File f = file(outFile)
+        f.write(create_table_sample(keyspace, table))
+        notifyFileWritten(f)
+    }
+}
+
+/**
+ * create a cql file containing an alter table snippet.
+ */
+task createCassandraTableAlter( description: 'Alter a Cassandra table; use -Pkeyspace=keyspace_name -Ptable=table_name',
+                              group: GROUP_CASSANDRA ) {
+    doLast {
+        checkProjectProperty('keyspace', 'keyspace_name')
+        checkProjectProperty('table', 'table_name')
+
+        def timestamp = new Date().format('yyyyMMddHHmmss')
+        def outFile = "${cassandra_mutations}/${timestamp}-${keyspace}-${table}-alter.cql"
+
+        mkdir(cassandra_mutations)
+        File f = file(outFile)
+        f.write(alter_table_sample(keyspace, table))
+
+        notifyFileWritten(f)
+    }
+}
+
+
+/**
+ * build and print the cassandra mutations that would be run + build the changelog table if necessary.
+ */
+task outputCassandraMutations( description: 'Output the Cassandra mutations to stdout; use -Penvironment=env_name',
+                               group: GROUP_CASSANDRA ) {
+    doLast {
+        buildCassandraMutations({session, mutation ->
+            logQuery(mutation)
+        })
+    }
+}
+
+/**
+ * build and apply the cassandra mutations to the environment + build the changelog table if necessary.
+ */
+task applyCassandraMutations( description: 'Apply the Cassandra mutations to an environment; use -Penvironment=env_name',
+                              group: GROUP_CASSANDRA ) {
+    doLast {
+        buildCassandraMutations({ session, mutation ->
+            session.execute( logQuery(mutation, "+ ") )
+        })
+    }
+}
+

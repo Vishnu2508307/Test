@@ -1,0 +1,245 @@
+# TODO: fetch nexus variables from secrets instead of hard-code them
+networks:
+  bronte_sandbox:
+    driver: bridge
+    driver_opts:
+      # Enable/Disable internet access from inside the network
+      "com.docker.network.bridge.enable_ip_masquerade": "true"
+    ipam:
+      config:
+        - subnet: 172.0.199.0/24
+
+services:
+  #
+  #
+  cassandra_node1:
+    container_name: cassandra_node1
+    image: public.ecr.aws/docker/library/cassandra:3.11.8
+    networks:
+      bronte_sandbox:
+        ipv4_address: 172.0.199.101
+    ports:
+      - "9044:9042"
+    environment:
+      - HEAP_NEWSIZE=128M
+      - MAX_HEAP_SIZE=1024M
+      - CASSANDRA_SEEDS=cassandra_node1
+      - CASSANDRA_CLUSTER_NAME=citrus_sandbox
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+      - CASSANDRA_DC=ap-southeast-2
+    #mem_limit: 2G
+    ulimits:
+      memlock: -1
+      nproc: 32768
+      nofile: 100000
+    volumes:
+      #- ../../../build/docker/cassandra_node1/data/:/var/lib/cassandra/
+      - ../../../build/docker/cassandra_node1/etc/cassandra.yaml:/etc/cassandra/cassandra.yaml
+      - ../../../build/docker/cassandra_node1/etc/keystore.jks:/etc/cassandra/.keystore
+      - ../../../build/docker/cassandra_node1/etc/cassandra.pem:/cassandra.pem
+      - ../../../build/docker/cassandra_node1/etc/cqlshrc:/cqlshrc
+    healthcheck:
+      test: SSL_CERTFILE=/cassandra.pem cqlsh -u cassandra -p cassandra --cqlshrc=/cqlshrc --ssl -e 'describe keyspaces;'
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    restart: "no"
+
+  #
+  #
+  redis:
+    container_name: redis
+    image: public.ecr.aws/docker/library/redis:5.0.13-alpine3.14 #redis:3.2.6
+    networks:
+      bronte_sandbox:
+        ipv4_address: 172.0.199.4
+    #command: redis-server --requirepass 5k6LyvSmUBqM9TpX6gTCDA4pV8Z7N5tJ
+    command: --requirepass 5k6LyvSmUBqM9TpX6gTCDA4pV8Z7N5tJ
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+    restart: "no"
+
+  #
+  #
+  cassandra_init:
+    container_name: cassandra_init
+    image: public.ecr.aws/docker/library/cassandra:3.11.8
+    networks:
+      bronte_sandbox:
+        ipv4_address: 172.0.199.5
+    depends_on:
+      cassandra_node1:
+        condition: service_healthy
+    volumes:
+      - ../../../build/docker/cassandra_init/etc/cassandra.pem:/cassandra.pem
+      - ../../../build/docker/cassandra_init/etc/cqlshrc:/cqlshrc
+      - ../../../build/docker/cassandra_init/init-sandbox.cql:/init-sandbox.cql
+    # set the system_auth properly before changing 
+    # run the load of the cql, then touch a file that it is done, then goto sleep for a while.
+    command: /bin/bash -c "set -e
+      && echo running inital cql
+      && SSL_CERTFILE=/cassandra.pem cqlsh -u cassandra -p cassandra --cqlshrc=/cqlshrc --ssl -f /init-sandbox.cql cassandra_node1
+      && touch /tmp/ok
+      && sleep 3600"
+    healthcheck:
+      test: sh -c '[ -f /tmp/ok ]'
+      interval: 5s
+      timeout: 1s
+      retries: 99
+    restart: "no"
+
+  #
+  #
+  apply_schema:
+    container_name: apply_schema
+    image: public.ecr.aws/docker/library/openjdk:11.0.11-9-jdk #adoptopenjdk/openjdk11:jdk-11.0.11_9-alpine
+    networks:
+      bronte_sandbox:
+        ipv4_address: 172.0.199.6
+    depends_on:
+      cassandra_init:
+        condition: service_healthy
+    volumes: 
+      - ../../../..:/src
+    environment: 
+      - CASSANDRA_TRUSTSTORE_PASSWORD=cassandra
+      - GRADLE_USER_HOME=/src/.gradle
+      - CASSANDRA_ENDPOINT_IP=cassandra_node1
+    command: /bin/bash -c "set -e
+      && cd /src
+      && ./gradlew --no-daemon --info --stacktrace :schemas:applySchemaChanges -Penvironment=sandbox
+      && touch /tmp/ok
+      && sleep 3600"
+    healthcheck:
+      test: sh -c '[ -f /tmp/ok ]'
+      interval: 5s
+      timeout: 1s
+      retries: 99
+    restart: "no"
+
+  #
+  #
+  apply_config:
+    container_name: apply_config
+    image: public.ecr.aws/docker/library/cassandra:3.11.8
+    networks:
+      bronte_sandbox:
+        ipv4_address: 172.0.199.7
+    depends_on:
+      apply_schema:
+        condition: service_healthy
+    volumes:
+      - ../../../build/docker/cassandra_init/etc/cassandra.pem:/cassandra.pem
+      - ../../../build/docker/cassandra_init/etc/cqlshrc:/cqlshrc
+      - ../../../build/docker/cassandra_init/configuration-sandbox.cql:/configuration-sandbox.cql
+      - ../../../build/docker/cassandra_init/citrus-test-data.cql:/citrus-test-data.cql
+      - ../../../..:/src
+    command: /bin/bash -c "set -e
+      && SSL_CERTFILE=/cassandra.pem cqlsh -u cassandra -p cassandra --cqlshrc=/cqlshrc --ssl -f /configuration-sandbox.cql cassandra_node1
+      && SSL_CERTFILE=/cassandra.pem cqlsh -u cassandra -p cassandra --cqlshrc=/cqlshrc --ssl -f /citrus-test-data.cql cassandra_node1
+      && touch /tmp/ok
+      && sleep 3600"
+    healthcheck:
+      test: sh -c '[ -f /tmp/ok ]'
+      interval: 5s
+      timeout: 1s
+      retries: 99
+    restart: "no"
+
+  #
+  #
+  mercury:
+    container_name: mercury
+    image: bronte/mercury:test
+    networks:
+      bronte_sandbox:
+        ipv4_address: 172.0.199.8
+    ports:
+      - "8080:8080"
+      # map port for citrus tests.
+      #- "8081:8080"
+    environment:
+      - AWS_REGION=ap-southeast-2
+      - ENV_REGION=SANDBOX
+      - CASSANDRA_KEYSTORE=/keystore.jks
+      - CASSANDRA_KEYSTORE_PASSWORD=cassandra
+      - CASSANDRA_CONTACTPOINTS=cassandra_node1
+      - CASSANDRA_AUTHENTICATION_USERNAME=cassandra
+      - CASSANDRA_AUTHENTICATION_PASSWORD=cassandra
+    volumes:
+      - ../../../../etc/tls/dse/sandbox/keystore.jks:/keystore.jks:ro
+    depends_on:
+      apply_config:
+        #condition: service_completed_successfully #only available in docker-compose 1.29+ ? (would not need all these weird health checks)
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: curl -v http://localhost:8080/r/ping
+      interval: 5s
+      timeout: 1s
+      retries: 99
+    restart: "no"
+
+  #
+  #
+  citrus_simulator:
+    container_name: citrus_simulator
+    image: public.ecr.aws/docker/library/openjdk:11.0.11-9-jdk
+    networks:
+      bronte_sandbox:
+        ipv4_address: 172.0.199.10
+    depends_on:
+      mercury:
+        condition: service_healthy
+    ports:
+      - "9999:9999"
+    volumes:
+      # map in the build (because the lib/...jar has a dynamic name)
+      - ../../../../simulator/build/:/build/:ro
+    command: /bin/bash -c "set -e
+      && ls -la /build/distributions
+      && apt-get update && apt-get install -y curl
+      && echo Preparing Citrus Simulator
+      && cd /build/distributions
+      && mkdir -pv /simulator_dist
+      && unzip simulator-*.zip -d /simulator_dist
+      && cd /simulator_dist
+      && cd simulator-*
+      && cd bin
+      && echo Starting Citrus Simulator
+      && ./simulator"
+    healthcheck:
+      test: curl -v http://localhost:9999/services/rest/ping
+      interval: 5s
+      timeout: 1s
+      retries: 99
+    restart: "no"
+
+  #
+  #
+  citrus_runner:
+    container_name: citrus_runner
+    image: public.ecr.aws/docker/library/openjdk:11.0.11-9-jdk #adoptopenjdk/openjdk11:jdk-11.0.11_9-alpine
+    networks:
+      bronte_sandbox:
+        ipv4_address: 172.0.199.11
+    depends_on:
+      citrus_simulator:
+        condition: service_healthy
+    volumes:
+      # map in the build (because the lib/...jar has a dynamic name)
+      - ../../../../:/src/
+    restart: "no"
+    environment:
+      - GRADLE_USER_HOME=/src/.gradle
+    command: /bin/bash -c "set -e
+      && ls -la /src/citrus/build/libs/
+      && echo Nexus ${NEXUS_USERNAME}
+      && echo Runner ${CITRUS_RUNNER_NUM} of ____
+      && mkdir -pv /src/citrus/build/logs
+      && cd /src
+      && ./gradlew :citrus:runFeaturesSetInParallel -Pfeatures_set=generated/citrus_features_${CITRUS_RUNNER_NUM} -Pparallelism=4 -PnexusUsername=$NEXUS_USERNAME -PnexusPassword=$NEXUS_PASSWORD -Dorg.gradle.jvmargs=-Xmx1024m"

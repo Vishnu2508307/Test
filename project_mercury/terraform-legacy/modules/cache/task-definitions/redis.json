@@ -1,0 +1,43 @@
+[
+  {
+    "name": "${container_name}",
+    "image": "585397755241.dkr.ecr.ap-southeast-2.amazonaws.com/mercury/cache:latest",
+    "essential": true,
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-region": "${region}",
+        "awslogs-group": "${log_group}",
+        "awslogs-stream-prefix": "${ecs_cluster}"
+      }
+    },
+    "entryPoint": ["/bin/bash"],
+    "command": [
+      "-c",
+      "redis-server --requirepass \"$(aws secretsmanager get-secret-value --secret-id \"$REDIS_PASSWORD\" --region ap-southeast-2 --query 'SecretString' --output text)\""
+    ],
+    "environment": [
+      { "name": "REDIS_PASSWORD", "value": "${redis_password_secrets_reference}" }
+    ],
+    "tags": [
+      {
+        "key": "t_AppID",
+        "value": "${app_id}"
+      },
+      {
+        "key": "t_cost_centre",
+        "value": "${cost_centre}"
+      },
+      {
+        "key": "t_environment",
+        "value": "${environment}"
+      },
+      {
+        "key": "t_dcl",
+        "value": "${dcl}"
+      }
+    ],
+    "volumesFrom": []
+  }
+]
+

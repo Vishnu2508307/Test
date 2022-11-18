@@ -1,0 +1,66 @@
+package com.smartsparrow.rtm.message.handler;
+
+import static com.smartsparrow.rtm.MessageHandlerTestUtils.verifySentMessage;
+import static com.smartsparrow.rtm.message.handler.<%=messageName %>Handler.<%= messageType.replaceAll('\\.', '_').toUpperCase() %>_ERROR;
+import static com.smartsparrow.rtm.message.handler.<%=messageName %>Handler.<%= messageType.replaceAll('\\.', '_').toUpperCase() %>_OK;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
+
+import org.eclipse.jetty.websocket.api.Session;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+import com.smartsparrow.rtm.RTMWebSocketTestUtils;
+import com.smartsparrow.rtm.lang.RTMValidationException;
+import com.smartsparrow.rtm.message.recv.$messageName;
+
+import reactor.test.publisher.TestPublisher;
+
+class <%= messageName %>HandlerTest {
+
+    @InjectMocks
+    private <%= messageName %>Handler handler;
+
+    @Mock
+    private $messageName message;
+    private Session session;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.initMocks(this);
+        session = RTMWebSocketTestUtils.mockSession();
+    }
+
+    @Test
+    void validate_no<%=parameters[0].capitalize() %>() {
+        when(message.get<%=parameters[0].capitalize() %>()).thenReturn(null);
+
+        RTMValidationException t = assertThrows(RTMValidationException.class, () -> handler.validate(message));
+        assertEquals("<%=parameters[0] %> is required", t.getErrorMessage());
+        assertEquals(<%= messageType.replaceAll('\\.', '_').toUpperCase() %>_ERROR, t.getType());
+        assertEquals(400, t.getStatusCode());
+    }
+
+    @Test
+    void handle() {
+        handler.handle(session, message);
+
+        verifySentMessage(session, "{\"type\":\"" + <%= messageType.replaceAll('\\.', '_').toUpperCase() %>_OK + "\"}");
+    }
+
+    @Test
+    void handle_error() {
+        TestPublisher<Void> publisher = TestPublisher.create();
+        publisher.error(new RuntimeException("some exception"));
+        //when(<some service call>).thenReturn(publisher.flux());
+
+        handler.handle(session, message);
+
+        verifySentMessage(session, "{\"type\":\"" + <%= messageType.replaceAll('\\.', '_').toUpperCase() %>_ERROR + "\",\"code\":500," +
+                "\"message\":\"some exception\"}");
+    }
+}

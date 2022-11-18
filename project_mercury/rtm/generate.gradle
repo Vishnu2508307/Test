@@ -1,0 +1,72 @@
+def defineType = { fieldName ->
+    if (fieldName.endsWith('Id')) {
+        return 'UUID'
+    }
+    if (fieldName.equals('permissionLevel')) {
+        return 'PermissionLevel'
+    }
+    return 'String';
+}
+
+def templatesToCreate = { messageClassName ->
+    [
+            message: [
+                    folder : "${project.projectDir}/src/main/java/com/smartsparrow/rtm/message/recv/",
+                    template : 'RTMMessage.template',
+                    className : "${messageClassName}.java"
+            ],
+            handler: [
+                    folder : "${project.projectDir}/src/main/java/com/smartsparrow/rtm/message/handler/",
+                    template : 'RTMMessageHandler.template',
+                    className : "${messageClassName}Handler.java"
+            ],
+            test : [
+                    folder : "${project.projectDir}/src/test/java/com/smartsparrow/rtm/message/handler/",
+                    template : 'RTMMessageHandlerTest.template',
+                    className : "${messageClassName}HandlerTest.java"
+            ]
+    ]
+}
+
+def supplyProperty = { name, message, eg ->
+    def result;
+    if (project.hasProperty(name) && project.property(name)) {
+        result = project.property(name)
+    } else {
+        ant.input(message: "${message} (e.g. ${eg})", addproperty: name)
+        result = ant["${name}"]
+    }
+    boolean supplied = result?.trim()
+    if (supplied) {
+        return result
+    } else {
+        throw new InvalidUserDataException("missing required project parameter; needs -P${name}=${eg}")
+    }
+}
+
+task generateMessageClasses(description: 'Generate message classes scaffolding; use -PmessageClassName=class_name, ' +
+        '-PmessageType=message_type, -Pfields=list_of_fields', group: 'Generate from template' ) {
+    doLast {
+        def messageClassName = supplyProperty('messageClassName', 'Enter the message class name', 'CreateTeamMessage')
+        def parameters = []
+        supplyProperty('fields', 'Enter the message field names separating by comma', 'pluginId, name')
+                .tokenize(',').each {
+            parameters.add(it.trim())
+        }
+        def messageType = supplyProperty('messageType', 'Enter the message type', 'author.team.create')
+
+        templatesToCreate(messageClassName).values().each { templ ->
+            copy {
+                from 'templates'
+                into templ.folder
+                include templ.template
+                rename { file -> templ.className }
+                expand(messageName: messageClassName,
+                        messageType: messageType,
+                        parameters: parameters,
+                        defineType: defineType)
+                logger.lifecycle "File was created: ${templ.folder}${templ.className}"
+            }
+        }
+    }
+}
